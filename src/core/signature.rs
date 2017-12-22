@@ -2,17 +2,12 @@ use ring::signature;
 use super::key::{WalletKeyPair, WalletPub};
 use untrusted;
 
+#[derive(Deserialize, Serialize)]
 pub struct Signature {
     edd25519_sig: Vec<u8>,
 }
 
 impl Signature {
-    pub fn from_edd25519_sig_bytes(msg: &[u8]) -> Self {
-        Signature {
-            edd25519_sig: msg.to_vec(),
-        }
-    }
-
     pub fn sign(key: &WalletKeyPair, msg: &[u8]) -> Self {
         let sig = key.key_pair.sign(msg);
 

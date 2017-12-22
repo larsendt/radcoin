@@ -2,56 +2,52 @@ use super::amount::Amount;
 use super::coin::Coin;
 use super::key::{WalletKeyPair, WalletPub};
 use super::signature::Signature;
+use serde_json;
 
-pub struct Transaction<'a> {
+#[derive(Deserialize, Serialize)]
+pub struct Transaction {
     pub amount: Amount,
     pub coin: Coin,
-    pub from_keypair: &'a WalletKeyPair,
-    pub to_addr: &'a WalletPub,
+    pub from_addr: WalletPub,
+    pub to_addr: WalletPub,
     pub timestamp_millis: i64,
 }
 
-pub struct SignedTransaction<'a> {
-    pub transaction: Transaction<'a>,
+#[derive(Deserialize, Serialize)]
+pub struct SignedTransaction {
+    pub transaction: Transaction,
     pub signature: Signature,
 }
 
-impl<'a> Transaction<'a> {
+impl Transaction {
     pub fn new(
         amount: Amount,
         coin: Coin,
-        from: &'a WalletKeyPair,
-        to: &'a WalletPub,
+        from_addr: WalletPub,
+        to_addr: WalletPub,
         timestamp_millis: i64)
         -> Self {
 
         Transaction {
             amount: amount,
             coin: coin,
-            from_keypair: from,
-            to_addr: to,
+            from_addr: from_addr,
+            to_addr: to_addr,
             timestamp_millis: timestamp_millis,
         }
     }
 
     pub fn serialized_for_signing(&self) -> Vec<u8> {
-        let a = self.amount.serialize();
-        let c = self.coin.serialize();
-        let f = self.from_keypair.public_key().serialize();
-        let t = self.to_addr.serialize();
-        let ts = format!("{}_unix_millis", self.timestamp_millis);
-        let fmt = format!(
-            "amount:{},coin:{},from:{},to:{},timestamp:{}",
-            a, c, f, t, ts);
-        println!("{}", fmt);
-        fmt.into_bytes()
+        serde_json::to_vec(self).unwrap()
     }
 }
 
-impl<'a> SignedTransaction<'a> {
-    pub fn sign(transaction: Transaction<'a>) -> Self {
+impl SignedTransaction {
+    pub fn sign(transaction: Transaction, from_keypair: &WalletKeyPair)
+        -> Self {
+
         let sig = Signature::sign(
-            &transaction.from_keypair,
+            from_keypair,
             &(transaction.serialized_for_signing()));
 
         SignedTransaction {
@@ -62,11 +58,54 @@ impl<'a> SignedTransaction<'a> {
 
     pub fn signature_is_valid(&self) -> bool {
         self.signature.msg_has_valid_sig(
-            &self.transaction.from_keypair.public_key(),
+            &self.transaction.from_addr,
             &self.transaction.serialized_for_signing())
     }
 
     pub fn serialized_for_block(&self) -> Vec<u8> {
-        vec![1, 2, 3, 4]
+        serde_json::to_vec(self).unwrap()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use core::amount::Amount;
+    use core::coin::Coin;
+    use core::key::{WalletKeyPair, WalletPub};
+    use core::transaction::{Transaction, SignedTransaction};
+
+    #[test]
+    fn test_valid_transaction_is_valid() {
+        let me = WalletKeyPair::new();
+        let somebody = WalletKeyPair::new();
+
+        let txn = Transaction::new(
+            Amount::units(1),
+            Coin::Radcoin,
+            me.public_key(),
+            somebody.public_key(),
+            0);
+
+        let signed = SignedTransaction::sign(txn, &me);
+
+        assert_eq!(signed.signature_is_valid(), true);
+    }
+
+    #[test]
+    fn test_transaction_with_sender_signer_mismatch_is_invalid() {
+        let me = WalletKeyPair::new();
+        let somebody = WalletKeyPair::new();
+        let third_person = WalletKeyPair::new();
+
+        let txn = Transaction::new(
+            Amount::units(1),
+            Coin::Radcoin,
+            third_person.public_key(),
+            somebody.public_key(),
+            0);
+
+        let signed = SignedTransaction::sign(txn, &me);
+
+        assert_eq!(signed.signature_is_valid(), false);
     }
 }

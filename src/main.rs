@@ -1,5 +1,10 @@
+#[macro_use]
+extern crate serde_derive;
+
 extern crate base64;
 extern crate ring;
+extern crate serde;
+extern crate serde_json;
 extern crate untrusted;
 
 mod wallet;
@@ -13,16 +18,16 @@ use core::transaction::{Transaction, SignedTransaction};
 fn main() {
     let me = Wallet::new();
     let somebody = Wallet::new();
-    let somebodys_addr = somebody.address();
 
     let txn = Transaction::new(
         Amount::units(1),
         Coin::Radcoin,
-        &me.key_pair,
-        &somebodys_addr,
+        me.address(),
+        somebody.address(),
         0);
 
-    let signed = SignedTransaction::sign(txn);
+    let signed = SignedTransaction::sign(txn, &me.key_pair);
+    println!("signed txn: {}", String::from_utf8(signed.serialized_for_block()).unwrap());
 
     println!("valid? {}", signed.signature_is_valid());
 }
