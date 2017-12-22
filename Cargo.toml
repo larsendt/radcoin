@@ -5,4 +5,4 @@ authors = ["Dane Larsen <dane.t.larsen@gmail.com>"]
 
 [dependencies]
 ring = "0.12.1"
-untrusted = "0.6.0"
+untrusted = "0.5.1"

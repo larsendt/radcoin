@@ -21,7 +21,7 @@ impl Signature {
         }
     }
 
-    pub fn msg_has_valid_sig(&self, key: WalletPub, msg: &[u8]) -> bool {
+    pub fn msg_has_valid_sig(&self, key: &WalletPub, msg: &[u8]) -> bool {
         let msg_input = untrusted::Input::from(msg);
         let key_input = untrusted::Input::from(&key.edd25519_pub_key);
         let sig_input = untrusted::Input::from(&self.edd25519_sig);

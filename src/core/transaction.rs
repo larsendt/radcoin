@@ -3,40 +3,35 @@ use super::coin::Coin;
 use super::key::{WalletKeyPair, WalletPub};
 use super::signature::Signature;
 
-pub struct Transaction {
+pub struct Transaction<'a> {
     pub amount: Amount,
     pub coin: Coin,
-    pub from_addr: WalletPub,
-    pub to_addr: WalletPub,
+    pub from_keypair: &'a WalletKeyPair,
+    pub to_addr: &'a WalletPub,
     pub timestamp_millis: i64,
 }
 
-pub struct SignedTransaction {
-    pub transaction: Transaction,
+pub struct SignedTransaction<'a> {
+    pub transaction: Transaction<'a>,
     pub signature: Signature,
 }
 
-impl Transaction {
+impl<'a> Transaction<'a> {
     pub fn new(
         amount: Amount,
         coin: Coin,
-        from: &WalletPub,
-        to: &WalletPub,
+        from: &'a WalletKeyPair,
+        to: &'a WalletPub,
         timestamp_millis: i64)
         -> Self {
 
         Transaction {
             amount: amount,
             coin: coin,
-            from_addr: *from,
-            to_addr: *to,
+            from_keypair: from,
+            to_addr: to,
             timestamp_millis: timestamp_millis,
         }
-    }
-
-    pub fn sign(self, key: &WalletKeyPair) -> SignedTransaction {
-        let sig = Signature::sign(&key, &(self.serialized_for_signing()));
-        SignedTransaction::new(self, sig)
     }
 
     pub fn serialized_for_signing(&self) -> Vec<u8> {
@@ -44,17 +39,21 @@ impl Transaction {
     }
 }
 
-impl SignedTransaction {
-    pub fn new(transaction: Transaction, signature: Signature) -> Self {
+impl<'a> SignedTransaction<'a> {
+    pub fn sign(transaction: Transaction<'a>) -> Self {
+        let sig = Signature::sign(
+            &transaction.from_keypair,
+            &(transaction.serialized_for_signing()));
+
         SignedTransaction {
             transaction: transaction,
-            signature: signature,
+            signature: sig,
         }
     }
 
     pub fn signature_is_valid(&self) -> bool {
         self.signature.msg_has_valid_sig(
-            self.transaction.from_addr,
+            &self.transaction.from_keypair.public_key(),
             &self.transaction.serialized_for_signing())
     }
 
