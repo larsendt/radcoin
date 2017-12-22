@@ -1,0 +1,6 @@
+[package]
+name = "radcoin"
+version = "0.1.0"
+authors = ["Dane Larsen <dane.t.larsen@gmail.com>"]
+
+[dependencies]
