@@ -1,3 +1,4 @@
+use base64;
 use ring::{rand, signature};
 use untrusted;
 
@@ -29,5 +30,11 @@ impl WalletKeyPair {
         WalletPub {
             edd25519_pub_key: self.key_pair.public_key_bytes().to_vec(),
         }
+    }
+}
+
+impl WalletPub {
+    pub fn serialize(&self) -> String {
+        base64::encode(&self.edd25519_pub_key)
     }
 }

@@ -35,7 +35,16 @@ impl<'a> Transaction<'a> {
     }
 
     pub fn serialized_for_signing(&self) -> Vec<u8> {
-        vec![1, 2, 3, 4]
+        let a = self.amount.serialize();
+        let c = self.coin.serialize();
+        let f = self.from_keypair.public_key().serialize();
+        let t = self.to_addr.serialize();
+        let ts = format!("{}_unix_millis", self.timestamp_millis);
+        let fmt = format!(
+            "amount:{},coin:{},from:{},to:{},timestamp:{}",
+            a, c, f, t, ts);
+        println!("{}", fmt);
+        fmt.into_bytes()
     }
 }
 

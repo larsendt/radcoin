@@ -1,7 +1,7 @@
 const NANOS_PER_UNIT: u64 = 1_000_000_000;
 
 pub struct Amount {
-    nanos: u64,
+    pub nanos: u64,
 }
 
 impl Amount {
@@ -9,5 +9,9 @@ impl Amount {
         Amount {
             nanos: v * NANOS_PER_UNIT,
         }
+    }
+
+    pub fn serialize(&self) -> String {
+        format!("{}_nanos", self.nanos)
     }
 }
