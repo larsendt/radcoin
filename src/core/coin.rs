@@ -1,4 +1,4 @@
 pub enum Coin {
-    RadCoin,
+    Radcoin,
     ButtWaterToken 
 }

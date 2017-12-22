@@ -1,4 +1,5 @@
 use ring::signature;
+use super::key::{WalletKeyPair, WalletPub};
 use untrusted;
 
 pub struct Signature {
@@ -8,25 +9,25 @@ pub struct Signature {
 impl Signature {
     pub fn from_edd25519_sig_bytes(msg: &[u8]) -> Self {
         Signature {
-            edd25519_sig: msg.clone(),
+            edd25519_sig: msg.to_vec(),
         }
     }
 
     pub fn sign(key: &WalletKeyPair, msg: &[u8]) -> Self {
-        let key_pair =
-            signature::Ed25519KeyPair::from_pkcs8(
-                untrusted::Input::from(&key.edd25519_pkcs8_keypair))?;
-
-        let sig = key_pair.sign(msg);
+        let sig = key.key_pair.sign(msg);
 
         Signature {
-            edd25519_sig: sig.as_ref().clone(),
+            edd25519_sig: sig.as_ref().to_vec()
         }
     }
 
     pub fn msg_has_valid_sig(&self, key: WalletPub, msg: &[u8]) -> bool {
+        let msg_input = untrusted::Input::from(msg);
+        let key_input = untrusted::Input::from(&key.edd25519_pub_key);
+        let sig_input = untrusted::Input::from(&self.edd25519_sig);
+
         match signature::verify(
-            &signature::ED25519, peer_public_key, msg, sig) {
+            &signature::ED25519, key_input, msg_input, sig_input) {
             Ok(_) => true,
             Err(_) => false,
         }

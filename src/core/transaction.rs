@@ -1,6 +1,11 @@
+use super::amount::Amount;
+use super::coin::Coin;
+use super::key::{WalletKeyPair, WalletPub};
+use super::signature::Signature;
+
 pub struct Transaction {
-    pub amount_micros: u64,
-    pub coin: Coin
+    pub amount: Amount,
+    pub coin: Coin,
     pub from_addr: WalletPub,
     pub to_addr: WalletPub,
     pub timestamp_millis: i64,
@@ -13,24 +18,24 @@ pub struct SignedTransaction {
 
 impl Transaction {
     pub fn new(
-        amount_micros: u64,
+        amount: Amount,
         coin: Coin,
-        from: WalletPub,
-        to: WalletPub,
+        from: &WalletPub,
+        to: &WalletPub,
         timestamp_millis: i64)
         -> Self {
 
         Transaction {
-            amount_micros: amount_micros,
+            amount: amount,
             coin: coin,
-            from: WalletPub,
-            to: WalletPub,
+            from_addr: *from,
+            to_addr: *to,
             timestamp_millis: timestamp_millis,
         }
     }
 
-    pub fn sign(self, key: WalletKeyPair) -> SignedTransaction {
-        let sig = Signature::sign(&key, &(self.bytes_for_signing()));
+    pub fn sign(self, key: &WalletKeyPair) -> SignedTransaction {
+        let sig = Signature::sign(&key, &(self.serialized_for_signing()));
         SignedTransaction::new(self, sig)
     }
 
@@ -48,14 +53,9 @@ impl SignedTransaction {
     }
 
     pub fn signature_is_valid(&self) -> bool {
-        match Signature::verify(
+        self.signature.msg_has_valid_sig(
             self.transaction.from_addr,
-            self.signature,
-            self.transaction.bytes_for_signing()) {
-            Signature::Valid => true,
-            Signature::Invalid => false,
-            e => panic!("Unexpected signature verification status {:?}", e),
-        }
+            &self.transaction.serialized_for_signing())
     }
 
     pub fn serialized_for_block(&self) -> Vec<u8> {
