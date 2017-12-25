@@ -1,11 +1,10 @@
 const VERSION_TAG: &str = "radcoin-2017-12-24";
 const MAX_MINING_ENTROPY_SIZE: u16 = 32;
 const MAX_TRANSACTIONS_PER_BLOCK: u32 = 256;
-const FIVE_MINUTES: i64 = 5 * 60 * 1000;
-const FIFTEEN_MINUTES: i64 = 15 * 60 * 1000;
+const ONE_MINUTE: i64 = 1 * 60 * 1000;
+const THIRTY_SECONDS: i64 = 30 * 1000;
 const RADCOIN_NANOS: u64 = 100 * 1_000_000_000;
 const BWATER_TOKEN_NANOS: u64 = 100 * 1_000_000_000;
-const DEFAULT_DIFFICULTY: u8 = 2;
 
 #[derive(Deserialize, Serialize, Clone)]
 pub struct BlockConfig {
@@ -43,8 +42,8 @@ impl BlockConfig {
             max_mining_entropy_size: MAX_MINING_ENTROPY_SIZE,
             max_transactions_per_block: MAX_TRANSACTIONS_PER_BLOCK,
             difficulty_config: DifficultyConfig {
-                halve_gt_time_delta: FIFTEEN_MINUTES,
-                double_gt_time_delta: FIVE_MINUTES,
+                halve_gt_time_delta: ONE_MINUTE,
+                double_gt_time_delta: THIRTY_SECONDS,
             },
             reward_config: RewardConfig {
                 radcoin_nanos: RADCOIN_NANOS,
@@ -60,20 +59,20 @@ impl BlockConfig {
         -> Self {
 
         let difficulty;
-        if parent_timestamp - gp_timestamp > FIFTEEN_MINUTES {
+        if parent_timestamp - gp_timestamp > ONE_MINUTE {
             if parent_difficulty > 0 {
                 difficulty = parent_difficulty - 1;
             } else {
                 difficulty = parent_difficulty;
             }
-        } else if parent_timestamp - gp_timestamp < FIVE_MINUTES {
+        } else if parent_timestamp - gp_timestamp < THIRTY_SECONDS {
             if parent_difficulty < 255 {
                 difficulty = parent_difficulty + 1;
             } else {
                 difficulty = parent_difficulty;
             }
         } else {
-            difficulty = DEFAULT_DIFFICULTY;
+            difficulty = parent_difficulty;
         }
 
         BlockConfig {
@@ -83,8 +82,8 @@ impl BlockConfig {
             max_mining_entropy_size: MAX_MINING_ENTROPY_SIZE,
             max_transactions_per_block: MAX_TRANSACTIONS_PER_BLOCK,
             difficulty_config: DifficultyConfig {
-                halve_gt_time_delta: FIFTEEN_MINUTES,
-                double_gt_time_delta: FIVE_MINUTES,
+                halve_gt_time_delta: ONE_MINUTE,
+                double_gt_time_delta: THIRTY_SECONDS,
             },
             reward_config: RewardConfig {
                 radcoin_nanos: RADCOIN_NANOS,
