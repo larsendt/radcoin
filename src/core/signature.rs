@@ -2,7 +2,7 @@ use ring::signature;
 use super::key::{WalletKeyPair, WalletPub};
 use untrusted;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Signature {
     edd25519_sig: Vec<u8>,
 }

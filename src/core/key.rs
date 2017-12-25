@@ -1,7 +1,7 @@
 use ring::{rand, signature};
 use untrusted;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct WalletPub {
     pub edd25519_pub_key: Vec<u8>,
 }

@@ -3,7 +3,7 @@ use core::transaction::SignedTransaction;
 use ring::digest;
 use serde_json;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Block {
     pub block_num: u64,
     pub unix_millis: i64,

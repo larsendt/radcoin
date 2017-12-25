@@ -7,7 +7,7 @@ const RADCOIN_NANOS: u64 = 100 * 1_000_000_000;
 const BWATER_TOKEN_NANOS: u64 = 100 * 1_000_000_000;
 const DEFAULT_DIFFICULTY: u8 = 2;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct BlockConfig {
     pub version_tag: String,
     pub is_genesis: bool,
@@ -18,7 +18,7 @@ pub struct BlockConfig {
     pub reward_config: RewardConfig,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct DifficultyConfig {
     // If the time between grandparent and parent is greater than this value,
     // subtract one from the parent's difficulty setting
@@ -28,7 +28,7 @@ pub struct DifficultyConfig {
     pub double_gt_time_delta: i64,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct RewardConfig {
     pub radcoin_nanos: u64,
     pub buttwater_token_nanos: u64,

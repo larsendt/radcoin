@@ -4,16 +4,16 @@ use super::key::{WalletKeyPair, WalletPub};
 use super::signature::Signature;
 use serde_json;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Transaction {
     pub amount: Amount,
     pub coin: Coin,
-    pub from_addr: WalletPub,
+    pub from_addr: Option<WalletPub>,
     pub to_addr: WalletPub,
     pub timestamp_millis: i64,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct SignedTransaction {
     pub transaction: Transaction,
     pub signature: Signature,
@@ -23,7 +23,7 @@ impl Transaction {
     pub fn new(
         amount: Amount,
         coin: Coin,
-        from_addr: WalletPub,
+        from_addr: Option<WalletPub>,
         to_addr: WalletPub,
         timestamp_millis: i64)
         -> Self {
@@ -43,11 +43,11 @@ impl Transaction {
 }
 
 impl SignedTransaction {
-    pub fn sign(transaction: Transaction, from_keypair: &WalletKeyPair)
+    pub fn sign(transaction: Transaction, signer_keypair: &WalletKeyPair)
         -> Self {
 
         let sig = Signature::sign(
-            from_keypair,
+            signer_keypair,
             &(transaction.serialized_for_signing()));
 
         SignedTransaction {
@@ -57,8 +57,15 @@ impl SignedTransaction {
     }
 
     pub fn signature_is_valid(&self) -> bool {
+        // If the from addr is None, it's a reward transaction and the to addr
+        // is the signer.
+        let signer_addr = match self.transaction.from_addr {
+            Some(ref a) => a,
+            None => &self.transaction.to_addr,
+        };
+
         self.signature.msg_has_valid_sig(
-            &self.transaction.from_addr,
+            signer_addr,
             &self.transaction.serialized_for_signing())
     }
 }

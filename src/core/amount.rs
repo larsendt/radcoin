@@ -1,6 +1,6 @@
 const NANOS_PER_UNIT: u64 = 1_000_000_000;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Amount {
     pub nanos: u64,
 }
