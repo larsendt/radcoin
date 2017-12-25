@@ -61,10 +61,6 @@ impl SignedTransaction {
             &self.transaction.from_addr,
             &self.transaction.serialized_for_signing())
     }
-
-    pub fn serialized_for_block(&self) -> Vec<u8> {
-        serde_json::to_vec(self).unwrap()
-    }
 }
 
 #[cfg(test)]
