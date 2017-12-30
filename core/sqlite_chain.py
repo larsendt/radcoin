@@ -35,9 +35,10 @@ FROM block_chain
 WHERE block_num >= :lower
 AND block_num < :upper"""
 
-GET_ALL_IN_ORDER_SQL = """
+GET_ALL_NON_GENESIS_IN_ORDER_SQL = """
 SELECT serialized
 FROM block_chain
+WHERE block_num > 0
 ORDER BY block_num ASC"""
 
 class SqliteBlockChainStorage(BlockChainStorage):
@@ -100,7 +101,7 @@ class SqliteBlockChainStorage(BlockChainStorage):
         c.execute(GET_RANGE_SQL, args)
         return map(lambda r: HashedBlock.deserialize(r[0]), c)
 
-    def get_all_in_order(self) -> Iterator[HashedBlock]:
+    def get_all_non_genesis_in_order(self) -> Iterator[HashedBlock]:
         c = self._conn.cursor()
-        c.execute(GET_ALL_IN_ORDER_SQL)
+        c.execute(GET_ALL_NON_GENESIS_IN_ORDER_SQL)
         return map(lambda r: HashedBlock.deserialize(r[0]), c)

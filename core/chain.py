@@ -36,7 +36,11 @@ class BlockChain(object):
         genesis = storage.get_genesis()
         if genesis is None:
             raise NoGenesisBlockError("No genesis block in storage")
-        return BlockChain(genesis, storage)
+        bc = BlockChain(genesis, storage)
+        for block in storage.get_all_non_genesis_in_order():
+            print("Loading", block.block_num())
+            bc._process_block(block)
+        return bc
 
     @staticmethod
     def new(storage: BlockChainStorage, genesis_block: HashedBlock) -> "BlockChain":
@@ -53,6 +57,10 @@ class BlockChain(object):
         return self.storage.get_by_hash(self.master_chain[-1])
 
     def add_block(self, block: HashedBlock) -> None:
+        self._process_block(block)
+        self.storage.add_block(block)
+
+    def _process_block(self, block: HashedBlock) -> None:
         if not self.storage.has_hash(block.parent_mining_hash()):
             raise UnknownParentError(
                 "Parent with hash {} not known".format(
@@ -75,7 +83,6 @@ class BlockChain(object):
             self.master_chain = self.make_master_chain(block.mining_hash())
 
         self.master_chain.append(block.mining_hash())
-        self.storage.add_block(block)
 
     def tuning_segment_difficulty(self) -> int:
         seg_stop = ((self.height // TUNING_SEGMENT_LENGTH) + 1) * TUNING_SEGMENT_LENGTH

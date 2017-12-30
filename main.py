@@ -26,6 +26,7 @@ else:
 
 while True:
     head = chain.get_head()
+    print("Mining on block {}".format(head.block_num()))
     new_block = bm.mine_on(head, chain.get_difficulty())
     print("Found block {} {}".format(new_block.block_num(), new_block.mining_hash().hex()))
     chain.add_block(new_block)
