@@ -1,6 +1,6 @@
 from core.serializable import Serializable, Ser
 
-DEFAULT_DIFFICULTY = 2
+DEFAULT_DIFFICULTY = 20
 
 class BlockConfig(Serializable):
     def __init__(self) -> None:

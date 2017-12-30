@@ -3,6 +3,7 @@ from core.block import Block, HashedBlock
 from core.coin import Coin
 from core.key_pair import KeyPair
 from core.transaction import Transaction, SignedTransaction
+from miner.block_miner import BlockMiner
 import os
 
 me = KeyPair()
@@ -15,4 +16,5 @@ s = SignedTransaction.sign(t, me)
 b = Block(0, me.address(), [s])
 hb = HashedBlock(b, os.urandom(32))
 
-print(hb.serialize())
+bm = BlockMiner()
+bm.mine(hb)

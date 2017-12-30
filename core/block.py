@@ -32,9 +32,27 @@ class HashedBlock(Serializable):
         self.block_hash = self.block.sha256()
         self.mining_entropy = mining_entropy
 
+    def replace_mining_entropy(self, new_entropy: bytes) -> None:
+        self.mining_entropy = new_entropy
+
     def mining_hash(self) -> bytes:
         v = self.block_hash + self.mining_entropy
         return hashlib.sha256(v).digest()
+
+    def hash_meets_difficulty(self) -> bool:
+        h = self.mining_hash()
+        zero_bytes = self.block.block_config.difficulty // 8
+        zero_bits = self.block.block_config.difficulty - (zero_bytes * 8)
+        one_bits = 8 - zero_bits
+
+        for i in range(0, zero_bytes):
+            if h[i] != 0:
+                return False
+
+        if h[zero_bytes] > 2**one_bits:
+            return False
+        else:
+            return True
 
     def serializable(self) -> Ser:
         return {
