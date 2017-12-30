@@ -6,7 +6,16 @@ Ser = Dict[str, Any] # would like to have Dict[str, Union['Ser', str]] here
 
 class Serializable(object):
     def serializable(self) -> Ser:
-        raise NotImplemented("Implement this, dummy")
+        raise NotImplementedError("Implement this, dummy")
+
+    @staticmethod
+    def from_dict(obj: Ser) -> Any:
+        raise NotImplementedError("Implement this, dummy")
+
+    @classmethod
+    def deserialize(cls, payload: bytes) -> Any:
+        obj = json.loads(payload)
+        return cls.from_dict(obj)
 
     def serialize(self) -> bytes:
         obj = self.serializable()

@@ -16,6 +16,12 @@ class Address(Serializable):
                 hex_verify_key, nacl.encoding.RawEncoder())
         return Address(key)
 
+    @staticmethod
+    def from_dict(obj: Ser) -> 'Address':
+        hex_key = obj["edd25519_pub_key"]
+        key = nacl.signing.VerifyKey(hex_key, nacl.encoding.HexEncoder())
+        return Address(key)
+
     def signature_is_valid(self, message: bytes, signature: Signature) -> bool:
         try:
             self._verify_key.verify(

@@ -4,33 +4,37 @@ from core.serializable import Serializable, Ser
 from core.timestamp import Timestamp
 from core.transaction import SignedTransaction
 import hashlib
-from typing import List, Union
+from typing import List, Optional
 
 class Block(Serializable):
     def __init__(
             self,
-            parent: Union['HashedBlock', None],
-            difficulty: int,
+            block_num,
+            parent_mining_hash: Optional[bytes],
+            config: BlockConfig,
             mining_addr: Address,
             transactions: List[SignedTransaction]) -> None:
 
-        if parent is None:
-            self.block_num = 0
+        if parent_mining_hash is None:
+            if block_num != 0:
+                raise ValueError("Parent is none, but block num is > 0")
         else:
-            self.block_num = parent.block.block_num + 1
+            if block_num == 0:
+                raise ValueError("Parent is not None, but block num = 0")
 
-        self.block_config = BlockConfig(difficulty)
-        self.parent = parent
+        self.block_num = block_num
+        self.block_config = config
+        self.parent_mining_hash = parent_mining_hash
         self.mining_addr = mining_addr
         self.transactions = transactions
 
     def serializable(self) -> Ser:
         txns = map(lambda t: t.serializable(), self.transactions)
         
-        if self.parent is None:
+        if self.parent_mining_hash is None:
             parent_hash = None
         else:
-            parent_hash = self.parent.mining_hash().hex()
+            parent_hash = self.parent_mining_hash.hex()
 
         return {
             "block_num": self.block_num,
@@ -40,23 +44,41 @@ class Block(Serializable):
             "config": self.block_config.serializable(),
         }
 
+    @staticmethod
+    def from_dict(obj: Ser) -> 'Block':
+        block_num = obj["block_num"]
+        if obj["parent_mined_hash"] is not None:
+            parent_hash: bytes = bytes.fromhex(obj["parent_mined_hash"])
+        else:
+            parent_hash = None
+        miner_addr = Address.from_dict(obj["miner_address"])
+        txns = list(map(lambda o: SignedTransaction.from_dict(o), obj["transactions"]))
+        config = BlockConfig.from_dict(obj["config"])
+        return Block(block_num, parent_hash, config, miner_addr, txns)
+
 class HashedBlock(Serializable):
-    def __init__(self, block: Block, mining_entropy: bytes = b"") -> None:
+    def __init__(
+            self,
+            block: Block,
+            mining_entropy: bytes = b"",
+            mining_timestamp: Optional[Timestamp] = None) -> None:
         self.block = block
-        self.block_hash = self.block.sha256()
         self.mining_entropy = mining_entropy
-        self.mining_timestamp = Timestamp.now()
+        if mining_timestamp is None:
+            self.mining_timestamp = Timestamp.now()
+        else:
+            self.mining_timestamp = mining_timestamp
 
     def replace_mining_entropy(self, new_entropy: bytes) -> None:
         self.mining_entropy = new_entropy
         self.mining_timestamp = Timestamp.now()
 
     def mining_hash(self) -> bytes:
-        v = self.block_hash + self.mining_entropy
+        v = self.block.sha256() + self.mining_entropy
         return hashlib.sha256(v).digest()
 
-    def parent(self) -> 'HashedBlock':
-        return self.block.parent
+    def parent_mining_hash(self) -> bytes:
+        return self.block.parent_mining_hash
 
     def block_num(self) -> int:
         return self.block.block_num
@@ -83,3 +105,14 @@ class HashedBlock(Serializable):
             "mined_hash": self.mining_hash().hex(),
             "mining_timestamp": self.mining_timestamp.serializable(),
         }
+
+    @staticmethod
+    def from_dict(obj: Ser) -> 'HashedBlock':
+        block = Block.from_dict(obj["block"])
+        mining_entropy = bytes.fromhex(obj["mining_entropy"])
+        mining_timestamp = Timestamp.from_dict(obj["mining_timestamp"])
+        hb = HashedBlock(
+            block,
+            mining_entropy=mining_entropy,
+            mining_timestamp=mining_timestamp)
+        return hb

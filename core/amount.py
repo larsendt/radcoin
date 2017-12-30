@@ -18,3 +18,7 @@ class Amount(Serializable):
             "nanos": self.nanos,
             "coin": self.coin.name
         }
+
+    @staticmethod
+    def from_dict(obj: Ser) -> "Amount":
+        return Amount(Coin(obj["coin"]), obj["nanos"])

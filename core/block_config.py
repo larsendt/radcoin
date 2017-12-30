@@ -8,3 +8,10 @@ class BlockConfig(Serializable):
         return {
             "difficulty": self.difficulty,
         }
+
+    @staticmethod
+    def from_dict(obj: Ser) -> "BlockConfig":
+        diff = obj["difficulty"]
+        if diff < 0 or diff > 255:
+            raise ValueError("Difficulty must be between 0 and 255")
+        return BlockConfig(diff)

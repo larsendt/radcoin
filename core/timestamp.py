@@ -13,3 +13,7 @@ class Timestamp(Serializable):
         return {
             "unix_millis": self.unix_millis
         }
+
+    @staticmethod
+    def from_dict(obj: Ser) -> 'Timestamp':
+        return Timestamp(obj["unix_millis"])

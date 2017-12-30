@@ -9,3 +9,8 @@ class Signature(Serializable):
         return {
             "ed25519_signature": self.ed25519_signature.hex(),
         }
+
+    @staticmethod
+    def from_dict(obj: Ser) -> 'Signature':
+        sig = bytes.fromhex(obj["ed25519_signature"])
+        return Signature(sig)

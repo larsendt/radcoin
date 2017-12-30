@@ -1,5 +1,6 @@
 from core.amount import Amount
 from core.block import Block, HashedBlock
+from core.block_config import BlockConfig
 from core.coin import Coin
 from core.key_pair import KeyPair
 from core.timestamp import Timestamp
@@ -12,7 +13,13 @@ class BlockMiner(object):
 
     def mine_on(self, parent: HashedBlock, difficulty: int) -> HashedBlock:
         reward = self.make_reward()
-        block = Block(parent, difficulty, self.key_pair.address(), [reward])
+        config = BlockConfig(difficulty)
+        block = Block(
+            parent.block_num()+1,
+            parent.mining_hash(),
+            config,
+            self.key_pair.address(),
+            [reward])
         hb = HashedBlock(block)
 
         while not hb.hash_meets_difficulty():
