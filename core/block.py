@@ -10,16 +10,16 @@ class Block(Serializable):
     def __init__(
             self,
             parent: Union['HashedBlock', None],
+            difficulty: int,
             mining_addr: Address,
             transactions: List[SignedTransaction]) -> None:
 
         if parent is None:
             self.block_num = 0
-            self.block_config = BlockConfig.genesis()
         else:
             self.block_num = parent.block.block_num + 1
-            self.block_config = BlockConfig()
 
+        self.block_config = BlockConfig(difficulty)
         self.parent = parent
         self.mining_addr = mining_addr
         self.transactions = transactions
@@ -54,6 +54,9 @@ class HashedBlock(Serializable):
     def mining_hash(self) -> bytes:
         v = self.block_hash + self.mining_entropy
         return hashlib.sha256(v).digest()
+
+    def parent(self) -> 'HashedBlock':
+        return self.block.parent
 
     def block_num(self) -> int:
         return self.block.block_num

@@ -10,9 +10,9 @@ class BlockMiner(object):
     def __init__(self) -> None:
         self.key_pair = KeyPair()
 
-    def mine_on(self, parent: HashedBlock) -> HashedBlock:
+    def mine_on(self, parent: HashedBlock, difficulty: int) -> HashedBlock:
         reward = self.make_reward()
-        block = Block(parent, self.key_pair.address(), [reward])
+        block = Block(parent, difficulty, self.key_pair.address(), [reward])
         hb = HashedBlock(block)
 
         while not hb.hash_meets_difficulty():
