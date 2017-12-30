@@ -1,6 +1,7 @@
 from core.block_config import BlockConfig
 from core.key_pair import Address
 from core.serializable import Serializable, Ser
+from core.timestamp import Timestamp
 from core.transaction import SignedTransaction
 import hashlib
 from typing import List, Union
@@ -44,9 +45,11 @@ class HashedBlock(Serializable):
         self.block = block
         self.block_hash = self.block.sha256()
         self.mining_entropy = mining_entropy
+        self.mining_timestamp = Timestamp.now()
 
     def replace_mining_entropy(self, new_entropy: bytes) -> None:
         self.mining_entropy = new_entropy
+        self.mining_timestamp = Timestamp.now()
 
     def mining_hash(self) -> bytes:
         v = self.block_hash + self.mining_entropy
@@ -75,4 +78,5 @@ class HashedBlock(Serializable):
             "block": self.block.serializable(),
             "mining_entropy": self.mining_entropy.hex(),
             "mined_hash": self.mining_hash().hex(),
+            "mining_timestamp": self.mining_timestamp.serializable(),
         }
