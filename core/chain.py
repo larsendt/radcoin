@@ -1,5 +1,7 @@
 from core.block import HashedBlock
 from core.chain_storage import BlockChainStorage
+from core.config import DB_PATH
+from core.dblog import DBLogger
 from core import difficulty
 from core.difficulty import DEFAULT_DIFFICULTY, difficulty_adjustment
 from typing import Dict, Iterator, List
@@ -25,11 +27,7 @@ class BlockChain(object):
             storage: BlockChainStorage) -> None:
 
         self.storage = storage
-        self.height = 0
-        self.previous_difficulty = DEFAULT_DIFFICULTY
-        self.current_difficulty = DEFAULT_DIFFICULTY
-        self.master_chain: List[bytes] = self.make_master_chain(
-                genesis_block.mining_hash())
+        self.l = DBLogger(self, DB_PATH)
 
     @staticmethod
     def load(storage: BlockChainStorage) -> "BlockChain":
@@ -37,9 +35,6 @@ class BlockChain(object):
         if genesis is None:
             raise NoGenesisBlockError("No genesis block in storage")
         bc = BlockChain(genesis, storage)
-        for block in storage.get_all_non_genesis_in_order():
-            print("Loading", block.block_num())
-            bc._process_block(block)
         return bc
 
     @staticmethod
@@ -51,58 +46,39 @@ class BlockChain(object):
         return BlockChain(genesis_block, storage)
 
     def get_difficulty(self) -> int:
-        return self.current_difficulty
+        h = self.get_head()
+        if (h.block_num() + 1) % TUNING_SEGMENT_LENGTH == 0:
+            self.l.info("Head ({}) is at end of segment, calculating retune".format(h.block_num()))
+            return self.tuning_segment_difficulty()
+        else:
+            return h.block.block_config.difficulty
 
     def get_head(self) -> HashedBlock:
-        return self.storage.get_by_hash(self.master_chain[-1])
+        return self.storage.get_head()
 
     def add_block(self, block: HashedBlock) -> None:
-        self._process_block(block)
+        self._validate_block(block)
+        self.l.info("Store block", block.block_num(), block.mining_hash().hex())
         self.storage.add_block(block)
 
-    def _process_block(self, block: HashedBlock) -> None:
+    def _validate_block(self, block: HashedBlock) -> None:
         if not self.storage.has_hash(block.parent_mining_hash()):
             raise UnknownParentError(
                 "Parent with hash {} not known".format(
                     block.parent_mining_hash()))
 
-        if block.block_num() % TUNING_SEGMENT_LENGTH == 0:
-            self.previous_difficulty = self.current_difficulty
-            self.current_difficulty = self.tuning_segment_difficulty()
-        elif block.block.block_config.difficulty != self.current_difficulty:
+        if block.block.block_config.difficulty != self.get_difficulty():
             raise DifficultyMismatchError(
                 "Unexpected difficulty {} for block {}, expected {}".format(
                     block.block.block_config.difficulty,
                     block.mining_hash(),
-                    self.current_difficulty))
-
-        if self.height < block.block_num():
-            self.height = block.block_num()
-
-        if block.parent_mining_hash() != self.master_chain[-1]:
-            self.master_chain = self.make_master_chain(block.mining_hash())
-
-        self.master_chain.append(block.mining_hash())
+                    self.get_difficulty()))
 
     def tuning_segment_difficulty(self) -> int:
-        seg_stop = ((self.height // TUNING_SEGMENT_LENGTH) + 1) * TUNING_SEGMENT_LENGTH
+        current_difficulty = self.get_head().block.block_config.difficulty
+        seg_stop = ((self.storage.get_height() // TUNING_SEGMENT_LENGTH) + 1) * TUNING_SEGMENT_LENGTH
         seg_start = seg_stop - TUNING_SEGMENT_LENGTH
-        segment = self.master_chain[seg_start:seg_stop]
-        times = map(lambda h: self.storage.get_by_hash(h).mining_timestamp, segment)
+        segment = self.storage.get_range(seg_start, seg_stop)
+        times = map(lambda b: b.mining_timestamp, segment)
         adjustment = difficulty_adjustment(times)
-        return self.previous_difficulty + adjustment
-
-    def make_master_chain(self, head_hash: bytes) -> List[bytes]:
-        chain: List[bytes] = []
-
-        while self.storage.has_hash(head_hash):
-            chain.append(head_hash)
-            b = self.storage.get_by_hash(head_hash)
-            head_hash = b.mining_hash()
-
-            if b.block_num() == 0:
-                return list(reversed(chain))
-
-        raise KeyError(
-            "No parent for {} when following chain to genesis".format(
-                head_hash))
+        return current_difficulty + adjustment

@@ -11,6 +11,12 @@ class BlockChainStorage(object):
     def get_by_hash(self, block_hash: bytes) -> HashedBlock:
         raise NotImplementedError()
 
+    def get_height(self) -> int:
+        raise NotImplementedError()
+
+    def get_head(self) -> HashedBlock:
+        raise NotImplementedError()
+
     def has_hash(self, block_hash: bytes) -> bool:
         raise NotImplementedError()
 
