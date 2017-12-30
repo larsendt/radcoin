@@ -54,10 +54,7 @@ class BlockChain(object):
         self.blocks[block.mining_hash()] = block
 
     def tuning_segment_difficulty(self) -> int:
-        if self.height < TUNING_SEGMENT_LENGTH:
-            return DEFAULT_DIFFICULTY
-
-        seg_stop = (self.height // TUNING_SEGMENT_LENGTH) * TUNING_SEGMENT_LENGTH
+        seg_stop = ((self.height // TUNING_SEGMENT_LENGTH) + 1) * TUNING_SEGMENT_LENGTH
         seg_start = seg_stop - TUNING_SEGMENT_LENGTH
         segment = self.master_chain[seg_start:seg_stop]
         times = map(lambda b: self.blocks[b].mining_timestamp, segment)
