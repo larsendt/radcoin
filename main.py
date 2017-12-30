@@ -1,12 +1,12 @@
 from core.amount import Amount
 from core.block import Block, HashedBlock
+from core.miner import BlockMiner
 from core.chain import BlockChain
 from core.coin import Coin
 from core.difficulty import DEFAULT_DIFFICULTY
 from core.key_pair import KeyPair
 from core.transaction import Transaction, SignedTransaction
 from core.timestamp import Timestamp
-from miner.block_miner import BlockMiner
 import os
 
 bm = BlockMiner()
