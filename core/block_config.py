@@ -10,3 +10,9 @@ class BlockConfig(Serializable):
         return {
             "difficulty": self.difficulty,
         }
+
+    @staticmethod
+    def genesis() -> 'BlockConfig':
+        bc = BlockConfig()
+        bc.difficulty = 0
+        return bc

@@ -5,23 +5,21 @@ from core.signature import Signature
 from typing import Union
 
 class Transaction(Serializable):
-    def __init__(self, amount: Amount) -> None:
+    def __init__(
+            self,
+            amount: Amount,
+            from_addr: Union[Address, None],
+            to_addr: Address) -> None:
         self.amount = amount
-        self.from_addr: Union[Address, None] = None
-        self.to_addr: Union[Address, None] = None
-
-    def addresses(self, from_addr: Address, to_addr: Address) -> None:
         self.from_addr = from_addr
         self.to_addr = to_addr
 
-    def reward(self, to_addr: Address) -> None:
-        self.to_addr = to_addr
-
     def serializable(self) -> Ser:
+        from_addr = self.from_addr.serializable() if self.from_addr else None,
         return {
             "amount": self.amount.serializable(),
-            "from_addr": self.from_addr.serializable(),
-            "to_addr": self.from_addr.serializable(),
+            "from_addr": from_addr,
+            "to_addr": self.to_addr.serializable(),
         }
 
 class SignedTransaction(Serializable):
