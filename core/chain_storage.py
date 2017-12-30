@@ -26,5 +26,5 @@ class BlockChainStorage(object):
     def get_range(self, start: int, stop: int) -> Iterator[HashedBlock]:
         raise NotImplementedError()
 
-    def get_all_in_order(self) -> Iterator[HashedBlock]:
+    def get_all_non_genesis_in_order(self) -> Iterator[HashedBlock]:
         raise NotImplementedError()

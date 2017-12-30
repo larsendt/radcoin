@@ -1,14 +1,6 @@
-from core.amount import Amount
-from core.block import Block, HashedBlock
-from core.block_config import BlockConfig
 from core.miner import BlockMiner
 from core.chain import BlockChain
-from core.coin import Coin
-from core.difficulty import DEFAULT_DIFFICULTY
-from core.key_pair import KeyPair
 from core.sqlite_chain import SqliteBlockChainStorage
-from core.transaction import Transaction, SignedTransaction
-from core.timestamp import Timestamp
 import os
 
 bm = BlockMiner()
@@ -16,9 +8,7 @@ storage = SqliteBlockChainStorage("db.sqlite")
 
 if storage.get_genesis() is None:
     print("Making a new chain")
-    t = Transaction(Amount.units(1, Coin.Radcoin), Timestamp.now(), None, bm.key_pair.address())
-    s = SignedTransaction.sign(t, bm.key_pair)
-    genesis = HashedBlock(Block(0, None, BlockConfig(DEFAULT_DIFFICULTY), bm.key_pair.address(), [s]))
+    genesis = bm.make_genesis()
     chain = BlockChain.new(storage, genesis)
 else:
     print("Loading existing chain")

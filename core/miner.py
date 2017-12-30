@@ -2,6 +2,7 @@ from core.amount import Amount
 from core.block import Block, HashedBlock
 from core.block_config import BlockConfig
 from core.coin import Coin
+from core.difficulty import DEFAULT_DIFFICULTY
 from core.key_pair import KeyPair
 from core.timestamp import Timestamp
 from core.transaction import Transaction, SignedTransaction
@@ -34,3 +35,14 @@ class BlockMiner(object):
                 self.key_pair.address())
 
         return SignedTransaction.sign(reward, self.key_pair)
+
+    def make_genesis(self) -> HashedBlock:
+        t = self.make_reward()
+        b = Block(
+            0, # block num 
+            None, # parent hash
+            BlockConfig(DEFAULT_DIFFICULTY),
+            self.key_pair.address(),
+            [t])
+        return HashedBlock(b)
+
