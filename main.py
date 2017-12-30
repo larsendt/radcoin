@@ -4,12 +4,13 @@ from core.chain import BlockChain
 from core.coin import Coin
 from core.key_pair import KeyPair
 from core.transaction import Transaction, SignedTransaction
+from core.timestamp import Timestamp
 from miner.block_miner import BlockMiner
 import os
 
 bm = BlockMiner()
 
-t = Transaction(Amount.units(1, Coin.Radcoin), None, bm.key_pair.address())
+t = Transaction(Amount.units(1, Coin.Radcoin), Timestamp.now(), None, bm.key_pair.address())
 s = SignedTransaction.sign(t, bm.key_pair)
 genesis = HashedBlock(Block(None, bm.key_pair.address(), [s]))
 

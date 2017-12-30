@@ -2,6 +2,7 @@ from core.amount import Amount
 from core.block import Block, HashedBlock
 from core.coin import Coin
 from core.key_pair import KeyPair
+from core.timestamp import Timestamp
 from core.transaction import Transaction, SignedTransaction
 import os
 
@@ -21,6 +22,7 @@ class BlockMiner(object):
     def make_reward(self) -> SignedTransaction:
         reward = Transaction(
                 Amount.units(100, Coin.Radcoin),
+                Timestamp.now(),
                 None,
                 self.key_pair.address())
 
