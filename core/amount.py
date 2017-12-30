@@ -15,6 +15,6 @@ class Amount(Serializable):
 
     def serializable(self) -> Ser:
         return {
-            "nanos": str(self.nanos),
+            "nanos": self.nanos,
             "coin": self.coin.name
         }

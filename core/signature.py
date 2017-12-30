@@ -7,5 +7,5 @@ class Signature(Serializable):
 
     def serializable(self) -> Ser:
         return {
-            "ed25519_signature": self.ed25519_signature,
+            "ed25519_signature": self.ed25519_signature.hex(),
         }
