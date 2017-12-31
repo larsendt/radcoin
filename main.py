@@ -1,5 +1,6 @@
 from core.miner import BlockMiner
 from core.key_pair import KeyPair
+from core.network.server import ChainServer
 from concurrent.futures import ProcessPoolExecutor, wait
 from tornado import ioloop, gen
 import os
@@ -21,4 +22,7 @@ def main():
     yield [async_mine(pool, kp), async_mine(pool, kp), async_mine(pool, kp)]
 
 if __name__ == "__main__":
+    serv = ChainServer()
+    serv.listen(8888, address="0.0.0.0")
+    #ioloop.IOLoop.current().start()
     ioloop.IOLoop.current().run_sync(main)

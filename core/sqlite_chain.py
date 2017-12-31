@@ -111,10 +111,14 @@ class SqliteBlockChainStorage(BlockChainStorage):
         res = c.fetchone()
         return res[0]
 
-    def get_by_hash(self, block_hash: bytes) -> HashedBlock:
+    def get_by_hash(self, block_hash: bytes) -> Optional[HashedBlock]:
         c = self._conn.cursor()
         c.execute(GET_BY_HASH_SQL, (block_hash,))
-        return HashedBlock.deserialize(c.fetchone()[0])
+        res = c.fetchone()
+        if res:
+            return HashedBlock.deserialize(res[0])
+        else:
+            return None
 
     def has_hash(self, block_hash: bytes) -> bool:
         c = self._conn.cursor()
