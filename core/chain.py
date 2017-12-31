@@ -20,6 +20,9 @@ class NoGenesisBlockError(Exception):
 class MultipleGenesisBlockError(Exception):
     pass
 
+class InvalidBlockError(Exception):
+    pass
+
 class BlockChain(object):
     def __init__(
             self,
@@ -80,10 +83,15 @@ class BlockChain(object):
         self.storage.add_block(block)
 
     def validate_block(self, block: HashedBlock) -> None:
+        if not block.is_valid():
+            raise InvalidBlockError(
+                    "Block with hash {} is invalid".format(
+                        block.mining_hash()))
+
         if not self.storage.has_hash(block.parent_mining_hash()):
             raise UnknownParentError(
                 "Parent with hash {} not known".format(
-                    block.parent_mining_hash()))
+                    block.parent_mining_hash().hex()))
 
         parent = self.storage.get_by_hash(block.parent_mining_hash())
         difficulty = self.get_difficulty(parent)

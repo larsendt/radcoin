@@ -1,5 +1,6 @@
 from core.config import PEER_DB_PATH, LOG_PATH
 from core.dblog import DBLogger
+import random
 import sqlite3
 import time
 from typing import List
@@ -100,6 +101,9 @@ class PeerList(object):
         c = self._conn.cursor()
         c.execute(GET_ALL_ACTIVE_PEERS_SQL)
         return list(map(lambda row: Peer(*row), c))
+
+    def random_peer(self) -> Peer:
+        return random.choice(self.get_all_active_peers())
 
     def _update_peer(self, peer: Peer) -> None:
         args = {

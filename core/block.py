@@ -83,6 +83,10 @@ class HashedBlock(Serializable):
     def block_num(self) -> int:
         return self.block.block_num
 
+    def is_valid(self) -> bool:
+        # todo...
+        return True
+
     def hash_meets_difficulty(self) -> bool:
         h = self.mining_hash()
         zero_bytes = self.block.block_config.difficulty // 8
