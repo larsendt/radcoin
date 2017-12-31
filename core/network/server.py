@@ -3,8 +3,10 @@ from core.chain import BlockChain
 from core.config import DB_PATH, LOG_PATH
 from core.dblog import DBLogger
 from core.network import util
+from core.network.peer_list import Peer, PeerList
 from core.sqlite_chain import SqliteBlockChainStorage
 from core.transaction import SignedTransaction
+import json
 from tornado import web
 
 class DefaultRequestHandler(web.RequestHandler):
@@ -63,9 +65,24 @@ class TransactionRequestHandler(web.RequestHandler):
 class PeerRequestHandler(web.RequestHandler):
     def initialize(self):
         self.l = DBLogger(self, LOG_PATH)
+        self.peer_list = PeerList()
 
     def get(self) -> None:
-        self.write(util.error_response("unimplemented"))
+        peers = list(map(lambda p: p.serializable(),
+                self.peer_list.get_all_active_peers()))
+        resp = {"peers": peers}
+        self.set_status(200)
+        self.write(resp)
+
+    def post(self) -> None:
+        peers = json.loads(self.request.body.decode('utf-8'))
+
+        for peer in peers:
+            p = Peer(peer["address"], peer["port"])
+            self.peer_list.add_peer(p)
+
+        self.set_status(200)
+        self.write(util.generic_ok_response())
 
 class ChainServer(object):
     def __init__(self) -> None:
