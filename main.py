@@ -2,6 +2,7 @@ import argparse
 from core.miner import BlockMiner
 from core.key_pair import KeyPair
 from core.network.client import ChainClient
+from core.network.peer_list import Peer
 from core.network.server import ChainServer
 from concurrent.futures import ProcessPoolExecutor, wait
 from tornado import ioloop, gen
@@ -31,9 +32,9 @@ def start_miner():
     yield pool.submit(mine, kp)
 
 @gen.coroutine
-def start_client():
+def start_client(add_local_peer_info):
     pool = ProcessPoolExecutor(max_workers=1)
-    yield pool.submit(client_poll)
+    yield pool.submit(client_poll, add_local_peer_info)
 
 def start_server():
     serv = ChainServer()
