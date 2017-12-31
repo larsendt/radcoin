@@ -81,7 +81,7 @@ class ChainClient(object):
             self.request_peers()
             self.tell_peers()
             self.tell_peers()
-            time.sleep(1)
+            time.sleep(30) # half of a block
 
     def _random_peer_get(self, path: str, params: Dict[Any, Any]) -> Optional[bytes]:
         peer = self.peer_list.random_peer()
@@ -94,7 +94,7 @@ class ChainClient(object):
         params: Dict[Any, Any]) -> Optional[bytes]:
 
         url = "http://" + peer.address + ":" + str(peer.port) + path
-        self.l.info("get", url, params)
+        self.l.debug("get", url, params)
 
         try:
             r = requests.get(url, params=params)
@@ -110,7 +110,7 @@ class ChainClient(object):
             path: str,
             payload: Any) -> None:
         url = "http://" + peer.address + ":" + str(peer.port) + path
-        self.l.info("post", url, payload)
+        self.l.debug("post", url, payload)
 
         try:
             r = requests.post(url, json=payload)
