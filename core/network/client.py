@@ -5,9 +5,10 @@ from core.dblog import DBLogger
 from core.network.peer_list import Peer, PeerList
 from core.sqlite_chain import SqliteBlockChainStorage
 from core.transaction import SignedTransaction
+import json
 import requests
 import time
-from typing import Optional
+from typing import Any, Dict, Optional
 
 class ChainClient(object):
     def __init__(self) -> None:
@@ -38,11 +39,16 @@ class ChainClient(object):
 
         while True:
             resp_body = self._random_peer_get(path, params)
-            if not resp_body:
+            if resp_body:
+                self.l.debug("resp body", resp_body)
+            else:
                 self.l.warn("no response from peer")
                 continue
 
-            block = HashedBlock.deserialize(resp_body)
+            obj = json.loads(resp_body)
+            block_obj = obj["blocks"][0]
+
+            block = HashedBlock.from_dict(block_obj)
             if block.block_num() != 0:
                 self.l.warn("got a non-genesis block from peer")
                 continue
@@ -53,20 +59,62 @@ class ChainClient(object):
 
             return block
 
+    def request_peers(self) -> None:
+        path = "/peer"
+        for peer in self.peer_list.get_all_active_peers():
+            body = self._peer_get(peer, path, {})
+            self.l.debug("resp body", body)
+            obj = json.loads(body)
+            for new_peer in obj["peers"]:
+                p = Peer(new_peer["address"], new_peer["port"])
+                self.peer_list.add_peer(p)
+
+    def tell_peers(self) -> None:
+        all_peers = self.peer_list.get_all_active_peers()
+        payload = {"peers": list(map(lambda p: p.serializable(), all_peers))}
+        for peer in all_peers:
+            self._peer_post(peer, "/peer", payload)
+
     def poll_forever(self) -> None:
         while True:
             self.l.debug("Polling...")
+            self.request_peers()
+            self.tell_peers()
+            self.tell_peers()
             time.sleep(1)
 
-    def _random_peer_get(self, path, params) -> Optional[bytes]:
+    def _random_peer_get(self, path: str, params: Dict[Any, Any]) -> Optional[bytes]:
         peer = self.peer_list.random_peer()
+        return self._peer_get(peer, path, params)
+
+    def _peer_get(
+        self,
+        peer: Peer,
+        path: str,
+        params: Dict[Any, Any]) -> Optional[bytes]:
+
         url = "http://" + peer.address + ":" + str(peer.port) + path
         self.l.info("get", url, params)
 
         try:
-            r = requests.get(url, data=params)
+            r = requests.get(url, params=params)
             return r.content
         except requests.exceptions.ConnectionError as e:
+            # todo: mark peer as inactive
             self.l.debug("Error from peer", peer, exc=e)
             return None
 
+    def _peer_post(
+            self,
+            peer: Peer,
+            path: str,
+            payload: Any) -> None:
+        url = "http://" + peer.address + ":" + str(peer.port) + path
+        self.l.info("post", url, payload)
+
+        try:
+            r = requests.post(url, json=payload)
+            self.l.debug(r.content)
+        except request.exceptions.ConnectionError as e:
+            # todo: mark peer as inactive
+            self.l.debug("Error from peer", peer, exc=e)

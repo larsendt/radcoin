@@ -27,7 +27,7 @@ class BlockMiner(object):
         self.chain: Optional[BlockChain] = None
 
         if self.storage.get_genesis() is None:
-            self.l.info("Storage has no genesis, either bootstrap with the client or mine a genesis block")
+            self.l.error("Storage has no genesis, either bootstrap with the client or mine a genesis block")
         else:
             self.l.info("Loading existing chain")
             self.chain = BlockChain.load(self.storage)

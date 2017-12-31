@@ -98,7 +98,7 @@ class PeerRequestHandler(web.RequestHandler):
     def post(self) -> None:
         peers = json.loads(self.request.body.decode('utf-8'))
 
-        for peer in peers:
+        for peer in peers["peers"]:
             p = Peer(peer["address"], peer["port"])
             self.peer_list.add_peer(p)
 
