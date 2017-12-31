@@ -24,14 +24,21 @@ class BlockMiner(object):
             self.key_pair = key_pair
 
         self.storage = SqliteBlockChainStorage(DB_PATH)
+        self.chain: Optional[BlockChain] = None
 
+        if self.storage.get_genesis() is None:
+            self.l.info("Storage has no genesis, either bootstrap with the client or mine a genesis block")
+        else:
+            self.l.info("Loading existing chain")
+            self.chain = BlockChain.load(self.storage)
+
+    def mine_genesis(self) -> None:
         if self.storage.get_genesis() is None:
             self.l.info("Making a new chain")
             genesis = self.make_genesis()
             self.chain = BlockChain.new(self.storage, genesis)
         else:
-            self.l.info("Loading existing chain")
-            self.chain = BlockChain.load(self.storage)
+            self.l.info("Storage already has genesis, no need to mine it")
 
     def mine_forever(self) -> None:
         while True:

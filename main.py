@@ -33,7 +33,8 @@ def start_server():
     serv.listen(8888, address="0.0.0.0")
 
 def mine_genesis():
-    pass
+    bm = BlockMiner() # pass in a key pair
+    bm.mine_genesis()
 
 def main():
     parser = argparse.ArgumentParser("Radcoin does stuff")
@@ -50,11 +51,13 @@ def main():
         if args.bootstrap:
             print("--mine_genesis and --bootstrap are mutually exclusive")
         else:
+            print("Mining genesis")
             mine_genesis()
     elif args.bootstrap:
         if args.mine_genesis:
             print("--mine_genesis and --bootstrap are mutually exclusive")
         else:
+            print("Bootstrapping with temp client")
             c = ChainClient()
             c.bootstrap()
 
