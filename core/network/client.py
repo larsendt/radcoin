@@ -12,6 +12,7 @@ from typing import Optional
 class ChainClient(object):
     def __init__(self) -> None:
         self.l = DBLogger(self, LOG_PATH)
+        self.l.info("Init")
         self.peer_list = PeerList()
         self.storage = SqliteBlockChainStorage(DB_PATH)
         self.chain: Optional[BlockChain] = None
@@ -60,7 +61,12 @@ class ChainClient(object):
     def _random_peer_get(self, path, params) -> Optional[bytes]:
         peer = self.peer_list.random_peer()
         url = "http://" + peer.address + ":" + str(peer.port) + path
-        self.l.debug("get", url, params)
-        r = requests.get(url, data=params)
-        return r.content
+        self.l.info("get", url, params)
+
+        try:
+            r = requests.get(url, data=params)
+            return r.content
+        except requests.exceptions.ConnectionError as e:
+            self.l.debug("Error from peer", peer, exc=e)
+            return None
 

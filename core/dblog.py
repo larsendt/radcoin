@@ -2,7 +2,6 @@ import sqlite3
 import arrow
 import traceback
 from typing import Any, Optional, Tuple, Union
-from types import TracebackType
 import os
 
 LEVEL = "INFO"
@@ -44,34 +43,34 @@ class DBLogger(object):
             c = self._conn.cursor()
             c.execute(CREATE_LOG_TABLE)
     
-    def debug(self, *args: Any, tb: Optional[TracebackType] = None) -> None:
+    def debug(self, *args: Any, exc: Optional[Exception] = None) -> None:
         if LEVEL == "DEBUG":
-            self.log(self.DEBUG, args, tb)
+            self.log(self.DEBUG, args, exc)
 
-    def info(self, *args: Any, tb: Optional[TracebackType] = None) -> None:
+    def info(self, *args: Any, exc: Optional[Exception] = None) -> None:
         if LEVEL in ("DEBUG", "INFO"):
-            self.log(self.INFO, args, tb)
+            self.log(self.INFO, args, exc)
 
-    def warn(self, *args: Any, tb: Optional[TracebackType] = None) -> None:
+    def warn(self, *args: Any, exc: Optional[Exception] = None) -> None:
         if LEVEL in ("DEBUG", "INFO", "WARN"):
-            self.log(self.WARN, args, tb)
+            self.log(self.WARN, args, exc)
 
-    def error(self, *args: Any, tb: Optional[TracebackType] = None) -> None:
+    def error(self, *args: Any, exc: Optional[Exception] = None) -> None:
         if LEVEL in ("DEBUG", "INFO", "WARN", "ERROR"):
-            self.log(self.ERROR, args, tb)
+            self.log(self.ERROR, args, exc)
 
-    def log(self, level: str, msg_args: Tuple[Any, ...], tb: Optional[TracebackType] = None) -> None:
+    def log(self, level: str, msg_args: Tuple[Any, ...], exc: Optional[Exception] = None) -> None:
         pid = os.getpid()
         now = arrow.utcnow()
         now_fmt = now.format(TIME_FMT)
         msg = " ".join(map(str, msg_args))
         print_msg = "[{}] [{}] [{}] [pid{}]: {}".format(level, now_fmt, self.source, pid, msg)
 
-        if tb is not None:
-            tb_str = "\n".join(traceback.format_tb(tb))
-            print_msg += "\n" + tb_str
+        if exc is not None:
+            exc_str = "".join(traceback.format_exception(None, exc, None))
+            print_msg += "\n" + exc_str
         else:
-            tb_str = None
+            exc_str = None
 
         print(print_msg)
 
@@ -81,7 +80,7 @@ class DBLogger(object):
             "source": self.source,
             "pid": pid,
             "message": msg,
-            "traceback": tb_str,
+            "traceback": exc_str,
         }
 
         with self._conn:
