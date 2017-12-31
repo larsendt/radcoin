@@ -36,11 +36,9 @@ class BlockChain(object):
             raise NoGenesisBlockError("No genesis block in storage")
 
         bc = BlockChain(genesis, storage)
-        prev_b = genesis
         bc.l.info("Loading existing chain, validating blocks")
         for b in storage.get_all_non_genesis_in_order():
-            bc.validate_block(b, simulated_head=prev_b)
-            prev_b = b
+            bc.validate_block(b)
         bc.l.info("All blocks validated")
         return bc
 
@@ -81,20 +79,14 @@ class BlockChain(object):
         self.l.debug("Store block", block.block_num(), block.mining_hash().hex())
         self.storage.add_block(block)
 
-    def validate_block(
-        self,
-        block: HashedBlock,
-        simulated_head: Optional[HashedBlock] = None) -> None:
-
+    def validate_block(self, block: HashedBlock) -> None:
         if not self.storage.has_hash(block.parent_mining_hash()):
             raise UnknownParentError(
                 "Parent with hash {} not known".format(
                     block.parent_mining_hash()))
 
-        if simulated_head:
-            difficulty = self.get_difficulty(simulated_head)
-        else:
-            difficulty = self.get_difficulty()
+        parent = self.storage.get_by_hash(block.parent_mining_hash())
+        difficulty = self.get_difficulty(parent)
 
         if block.block.block_config.difficulty != difficulty:
             raise DifficultyMismatchError(

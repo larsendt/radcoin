@@ -38,6 +38,24 @@ class BlockRequestHandler(web.RequestHandler):
             self.write(util.error_response(
                 "missing 'requested_hash' or 'requested_block_num' params"))
 
+    def post(self) -> None:
+        ser = self.request.body.decode('utf-8')
+        hb = HashedBlock.deserialize(ser)
+
+        if self.chain.storage.has_hash(hb.mining_hash()):
+            self.set_status(200)
+            self.write(util.generic_ok_response("already have that one"))
+            return
+
+        if not self.chain.storage.has_hash(hb.parent_mining_hash()):
+            self.set_status(400)
+            self.write(util.error_response("unknown parent"))
+            return
+
+        self.chain.add_block(hb)
+        self.set_status(200)
+        self.write(util.generic_ok_response())
+
     def get_by_hash(self, mining_hash: bytes) -> None:
         block = self.chain.storage.get_by_hash(mining_hash)
 
@@ -60,6 +78,9 @@ class TransactionRequestHandler(web.RequestHandler):
         self.l = DBLogger(self, LOG_PATH)
 
     def get(self) -> None:
+        self.write(util.error_response("unimplemented"))
+
+    def post(self) -> None:
         self.write(util.error_response("unimplemented"))
 
 class PeerRequestHandler(web.RequestHandler):
