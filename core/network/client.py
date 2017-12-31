@@ -115,6 +115,6 @@ class ChainClient(object):
         try:
             r = requests.post(url, json=payload)
             self.l.debug(r.content)
-        except request.exceptions.ConnectionError as e:
+        except requests.exceptions.ConnectionError as e:
             # todo: mark peer as inactive
             self.l.debug("Error from peer", peer, exc=e)
