@@ -17,12 +17,8 @@ def mine(key_pair: KeyPair) -> None:
     bm = BlockMiner()
     bm.mine_forever()
 
-def client_poll(add_local_peer_info) -> None:
+def client_poll() -> None:
     client = ChainClient()
-
-    if add_local_peer_info:
-        client.add_local_peer(Peer("radcoin.larsendt.com", SERVER_PORT)) # hax
-
     client.poll_forever()
 
 @gen.coroutine
@@ -32,9 +28,9 @@ def start_miner():
     yield pool.submit(mine, kp)
 
 @gen.coroutine
-def start_client(add_local_peer_info):
+def start_client():
     pool = ProcessPoolExecutor(max_workers=1)
-    yield pool.submit(client_poll, add_local_peer_info)
+    yield pool.submit(client_poll)
 
 def start_server():
     serv = ChainServer()
@@ -77,7 +73,7 @@ def main():
     if args.client:
         print("Running client")
         need_ioloop = True
-        ioloop.IOLoop.current().spawn_callback(start_client, args.server)
+        ioloop.IOLoop.current().spawn_callback(start_client)
 
     if args.miner:
         print("Running miner")

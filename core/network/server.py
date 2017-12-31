@@ -84,9 +84,9 @@ class TransactionRequestHandler(web.RequestHandler):
         self.write(util.error_response("unimplemented"))
 
 class PeerRequestHandler(web.RequestHandler):
-    def initialize(self):
+    def initialize(self, peer_list):
         self.l = DBLogger(self, LOG_PATH)
-        self.peer_list = PeerList()
+        self.peer_list = peer_list
 
     def get(self) -> None:
         peers = list(map(lambda p: p.serializable(),
@@ -108,6 +108,7 @@ class PeerRequestHandler(web.RequestHandler):
 class ChainServer(object):
     def __init__(self) -> None:
         self.l = DBLogger(self, LOG_PATH)
+        self.peer_list = PeerList()
         self.storage = SqliteBlockChainStorage(DB_PATH)
 
         if self.storage.get_genesis() is None:
@@ -121,8 +122,9 @@ class ChainServer(object):
             web.url(r"/", DefaultRequestHandler),
             web.url(r"/block", BlockRequestHandler, {"chain": self.chain}),
             web.url(r"/transaction", TransactionRequestHandler),
-            web.url(r"/peer", PeerRequestHandler),
+            web.url(r"/peer", PeerRequestHandler, {"peer_list": self.peer_list}),
         ])
 
     def listen(self, port: int, address="") -> None:
+        self.peer_list.add_peer(Peer(address, port))
         self.app.listen(port, address=address)
