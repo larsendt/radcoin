@@ -1,15 +1,14 @@
 from core.dblog import DBLogger
 from core.timestamp import Timestamp
-from core.config import DB_PATH
+from core.config import LOG_PATH
 import math
 from typing import Iterator
 
 DEFAULT_DIFFICULTY = 2
 BLOCK_TIME_TARGET = 1 * 2 * 1000 # 1 minute
 
-l = DBLogger(__name__, DB_PATH)
-
 def difficulty_adjustment(block_times: Iterator[Timestamp]) -> int:
+    l = DBLogger(__name__, LOG_PATH)
     """Computes how much the difficulty should be adjusted by (up or down).
 
     Uses the difference of the log of the mean block time delta and the log of

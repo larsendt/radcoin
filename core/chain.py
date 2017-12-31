@@ -1,6 +1,6 @@
 from core.block import HashedBlock
 from core.chain_storage import BlockChainStorage
-from core.config import DB_PATH
+from core.config import LOG_PATH
 from core.dblog import DBLogger
 from core import difficulty
 from core.difficulty import DEFAULT_DIFFICULTY, difficulty_adjustment
@@ -27,7 +27,7 @@ class BlockChain(object):
             storage: BlockChainStorage) -> None:
 
         self.storage = storage
-        self.l = DBLogger(self, DB_PATH)
+        self.l = DBLogger(self, LOG_PATH)
 
     @staticmethod
     def load(storage: BlockChainStorage) -> "BlockChain":

@@ -1,7 +1,8 @@
 from core.block import HashedBlock
 from core.chain_storage import BlockChainStorage
+from core.dblog import DBLogger
 from typing import List, Optional
-import apsw
+import sqlite3
 
 CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS blocks (
@@ -53,14 +54,19 @@ CLEAR_HEAD_SQL = "UPDATE blocks SET is_head=0 WHERE is_head=1"
 class SqliteBlockChainStorage(BlockChainStorage):
     def __init__(self, db_path: str) -> None:
         super().__init__()
+        self.l = DBLogger(self, db_path)
         self._path = db_path
-        self._conn = apsw.Connection(db_path)
+        self._conn = sqlite3.connect(db_path)
         with self._conn:
             cursor = self._conn.cursor()
             cursor.execute(CREATE_TABLE_SQL)
             cursor.execute(CREATE_HASH_INDEX_SQL)
             cursor.execute(CREATE_PARENT_HASH_INDEX_SQL)
             cursor.execute(CREATE_BLOCK_NUM_INDEX_SQL)
+
+    def busy_callback(self, calls: int) -> bool:
+        self.l.warn("Busy callback:", calls)
+        return True
 
     def add_block(self, block: HashedBlock) -> None:
         with self._conn:
@@ -116,7 +122,9 @@ class SqliteBlockChainStorage(BlockChainStorage):
         return c.fetchone() is not None 
 
     def get_genesis(self) -> Optional[HashedBlock]:
+        self.l.info("Get genesis")
         zero_blocks = list(self.get_by_block_num(0))
+        self.l.info("Got genesis")
         if len(zero_blocks) > 1:
             raise Exception("More than one genesis block!")
         elif len(zero_blocks) == 0:

@@ -12,8 +12,8 @@ name = "pypi"
 [packages]
 
 pynacl = "*"
-apsw = "*"
 arrow = "*"
+tornado = "*"
 
 
 [requires]

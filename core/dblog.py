@@ -1,8 +1,9 @@
-import apsw
+import sqlite3
 import arrow
 import traceback
 from typing import Any, Optional, Tuple, Union
 from types import TracebackType
+import os
 
 TIME_FMT = "YYYY-MM-DDTHH:mm:ssZ"
 
@@ -11,13 +12,14 @@ CREATE TABLE IF NOT EXISTS log (
     id INTEGER NOT NULL PRIMARY KEY,
     level TEXT,
     source TEXT,
+    pid INTEGER,
     message TEXT,
     traceback TEXT
 )"""
 
 INSERT_LOG_SQL = """
-INSERT INTO log(level, source, message, traceback) VALUES (
-    :level, :source, :message, :traceback
+INSERT INTO log(level, source, pid, message, traceback) VALUES (
+    :level, :source, :pid, :message, :traceback
 )"""
 
 class DBLogger(object):
@@ -35,7 +37,7 @@ class DBLogger(object):
             raise TypeError("Bad source type", type(source))
 
         self._db_path = db_path
-        self._conn = apsw.Connection(db_path)
+        self._conn = sqlite3.connect(db_path)
         with self._conn:
             c = self._conn.cursor()
             c.execute(CREATE_LOG_TABLE)
@@ -53,10 +55,11 @@ class DBLogger(object):
         self.log(self.ERROR, args, tb)
 
     def log(self, level: str, msg_args: Tuple[Any, ...], tb: Optional[TracebackType] = None) -> None:
+        pid = os.getpid()
         now = arrow.utcnow()
         now_fmt = now.format(TIME_FMT)
         msg = " ".join(map(str, msg_args))
-        print_msg = "[{}] [{}] [{}]: {}".format(level, now_fmt, self.source, msg)
+        print_msg = "[{}] [{}] [{}] [pid{}]: {}".format(level, now_fmt, self.source, pid, msg)
 
         if tb is not None:
             tb_str = "\n".join(traceback.format_tb(tb))
@@ -70,6 +73,7 @@ class DBLogger(object):
             "unix_millis": int(now.timestamp * 1000),
             "level": level,
             "source": self.source,
+            "pid": pid,
             "message": msg,
             "traceback": tb_str,
         }
