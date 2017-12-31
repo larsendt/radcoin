@@ -36,7 +36,7 @@ MARK_PEER_INACTIVE_SQL = """
 UPDATE peers SET active=0 WHERE address=:address AND port=:port
 """
 
-GATEWAY_ADDRESS = "localhost"
+GATEWAY_ADDRESS = "radcoin.larsendt.com"
 GATEWAY_PORT = 8888
 
 class Peer(object):
