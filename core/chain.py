@@ -65,8 +65,11 @@ class BlockChain(object):
         if (h.block_num() + 1) < TUNING_SEGMENT_LENGTH:
             return difficulty.DEFAULT_DIFFICULTY
         elif (h.block_num() + 1) % TUNING_SEGMENT_LENGTH == 0:
-            self.l.info("Head ({}) is at end of segment, calculating retune".format(h.block_num()))
-            return self.tuning_segment_difficulty(h.block.block_config.difficulty, h.block_num())
+            diff = self.tuning_segment_difficulty(
+                    h.block.block_config.difficulty, h.block_num())
+            self.l.info("Head ({}) is at end of segment, retune to {}".format(
+                h.block_num(), diff))
+            return diff
         else:
             return h.block.block_config.difficulty
 
@@ -75,7 +78,7 @@ class BlockChain(object):
 
     def add_block(self, block: HashedBlock) -> None:
         self.validate_block(block)
-        self.l.info("Store block", block.block_num(), block.mining_hash().hex())
+        self.l.debug("Store block", block.block_num(), block.mining_hash().hex())
         self.storage.add_block(block)
 
     def validate_block(
@@ -102,16 +105,16 @@ class BlockChain(object):
                     difficulty))
 
     def tuning_segment_difficulty(self, current_difficulty: int, height: int) -> int:
-        self.l.info("Calculating tuning segment difficulty using height", height)
+        self.l.debug("Calculating tuning segment difficulty using height", height)
 
         seg_stop = ((height // TUNING_SEGMENT_LENGTH) + 1) * TUNING_SEGMENT_LENGTH
         seg_start = seg_stop - TUNING_SEGMENT_LENGTH
-        self.l.info("Getting segment [{}, {})".format(seg_start, seg_stop))
+        self.l.debug("Getting segment [{}, {})".format(seg_start, seg_stop))
 
         segment = self.storage.get_range(seg_start, seg_stop)
         times = map(lambda b: b.mining_timestamp, segment)
         adjustment = difficulty_adjustment(times)
         new_difficulty = current_difficulty + adjustment
-        self.l.info("Tuning difficulty:", new_difficulty)
+        self.l.debug("Tuning difficulty:", new_difficulty)
 
         return new_difficulty

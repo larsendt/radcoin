@@ -5,6 +5,8 @@ from typing import Any, Optional, Tuple, Union
 from types import TracebackType
 import os
 
+LEVEL = "INFO"
+
 TIME_FMT = "YYYY-MM-DDTHH:mm:ssZ"
 
 CREATE_LOG_TABLE = """
@@ -43,16 +45,20 @@ class DBLogger(object):
             c.execute(CREATE_LOG_TABLE)
     
     def debug(self, *args: Any, tb: Optional[TracebackType] = None) -> None:
-        self.log(self.DEBUG, args, tb)
+        if LEVEL == "DEBUG":
+            self.log(self.DEBUG, args, tb)
 
     def info(self, *args: Any, tb: Optional[TracebackType] = None) -> None:
-        self.log(self.INFO, args, tb)
+        if LEVEL in ("DEBUG", "INFO"):
+            self.log(self.INFO, args, tb)
 
     def warn(self, *args: Any, tb: Optional[TracebackType] = None) -> None:
-        self.log(self.WARN, args, tb)
+        if LEVEL in ("DEBUG", "INFO", "WARN"):
+            self.log(self.WARN, args, tb)
 
     def error(self, *args: Any, tb: Optional[TracebackType] = None) -> None:
-        self.log(self.ERROR, args, tb)
+        if LEVEL in ("DEBUG", "INFO", "WARN", "ERROR"):
+            self.log(self.ERROR, args, tb)
 
     def log(self, level: str, msg_args: Tuple[Any, ...], tb: Optional[TracebackType] = None) -> None:
         pid = os.getpid()

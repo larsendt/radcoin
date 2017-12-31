@@ -122,9 +122,7 @@ class SqliteBlockChainStorage(BlockChainStorage):
         return c.fetchone() is not None 
 
     def get_genesis(self) -> Optional[HashedBlock]:
-        self.l.info("Get genesis")
         zero_blocks = list(self.get_by_block_num(0))
-        self.l.info("Got genesis")
         if len(zero_blocks) > 1:
             raise Exception("More than one genesis block!")
         elif len(zero_blocks) == 0:

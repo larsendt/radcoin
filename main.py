@@ -18,7 +18,7 @@ def async_mine(pool: ProcessPoolExecutor, key_pair: KeyPair) -> Generator:
 def main():
     pool = ProcessPoolExecutor(max_workers=4)
     kp = KeyPair()
-    yield [async_mine(pool, kp), async_mine(pool, kp), async_mine(pool, kp), async_mine(pool, kp)]
+    yield [async_mine(pool, kp), async_mine(pool, kp), async_mine(pool, kp)]
 
 if __name__ == "__main__":
     ioloop.IOLoop.current().run_sync(main)

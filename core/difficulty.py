@@ -28,14 +28,14 @@ def difficulty_adjustment(block_times: Iterator[Timestamp]) -> int:
         prev = t
 
     mean = sum(deltas) / len(deltas)
-    l.info("Segment mean ms:", mean)
-    l.info("Target ms:", BLOCK_TIME_TARGET)
+    l.debug("Segment mean ms:", mean)
+    l.debug("Target ms:", BLOCK_TIME_TARGET)
 
     log_mean = math.log2(mean)
     log_target = math.log2(BLOCK_TIME_TARGET)
     log_difference = log_target - log_mean
-    l.info("Log difference:", log_difference)
+    l.debug("Log difference:", log_difference)
 
     adjustment = int(round(log_target - log_mean))
-    l.info("Recommended adjustment:", adjustment)
+    l.debug("Recommended adjustment:", adjustment)
     return adjustment

@@ -36,7 +36,7 @@ class BlockMiner(object):
     def mine_forever(self) -> None:
         while True:
             head = self.chain.get_head()
-            self.l.info("Mining on block {}".format(head.block_num()))
+            self.l.debug("Mining on block {}".format(head.block_num()))
             new_block = self.mine_on(head, self.chain.get_difficulty())
 
             if new_block:
@@ -44,7 +44,7 @@ class BlockMiner(object):
                     new_block.block_num(), new_block.mining_hash().hex()))
                 self.chain.add_block(new_block)
             else:
-                self.l.info("Checking for new head")
+                self.l.debug("Checking for new head")
 
     def mine_on(self, parent: HashedBlock, difficulty: int) -> Optional[HashedBlock]:
         reward = self.make_reward()
