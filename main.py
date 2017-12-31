@@ -9,12 +9,19 @@ import os
 import traceback
 from typing import Generator
 
+SERVER_ADDRESS="0.0.0.0"
+SERVER_PORT=8888
+
 def mine(key_pair: KeyPair) -> None:
     bm = BlockMiner()
     bm.mine_forever()
 
-def client_poll() -> None:
+def client_poll(add_local_peer_info) -> None:
     client = ChainClient()
+
+    if add_local_peer_info:
+        client.add_local_peer(Peer("radcoin.larsendt.com", SERVER_PORT)) # hax
+
     client.poll_forever()
 
 @gen.coroutine
@@ -30,7 +37,7 @@ def start_client():
 
 def start_server():
     serv = ChainServer()
-    serv.listen(8888, address="0.0.0.0")
+    serv.listen(SERVER_PORT, address=SERVER_ADDRESS)
 
 def mine_genesis():
     bm = BlockMiner() # pass in a key pair
@@ -69,7 +76,7 @@ def main():
     if args.client:
         print("Running client")
         need_ioloop = True
-        ioloop.IOLoop.current().spawn_callback(start_client)
+        ioloop.IOLoop.current().spawn_callback(start_client, args.server)
 
     if args.miner:
         print("Running miner")

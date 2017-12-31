@@ -23,6 +23,9 @@ class ChainClient(object):
         else:
             self.l.warn("Storage has no genesis, either bootstrap via the client or mine a genesis block")
 
+    def add_local_peer(self, peer: Peer) -> None:
+        self.peer_list.add_peer(peer)
+
     def bootstrap(self) -> None:
         if self.storage.get_genesis():
             self.l.info("Already have genesis, no bootstrap needed")
