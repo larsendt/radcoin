@@ -4,7 +4,7 @@ import traceback
 from typing import Any, Optional, Tuple, Union
 from types import TracebackType
 
-TIME_FMT = "YYYY-MM-DD HH:mm:ss ZZ"
+TIME_FMT = "YYYY-MM-DDTHH:mm:ssZ"
 
 CREATE_LOG_TABLE = """
 CREATE TABLE IF NOT EXISTS log (

@@ -1,5 +1,5 @@
 from core.block import HashedBlock
-from typing import Iterator, Optional
+from typing import List, Optional
 
 class BlockChainStorage(object):
     def __init__(self):
@@ -23,14 +23,14 @@ class BlockChainStorage(object):
     def get_genesis(self) -> Optional[HashedBlock]:
         raise NotImplementedError()
 
-    def get_by_parent_hash(self, parent_hash: bytes) -> Iterator[HashedBlock]:
+    def get_by_parent_hash(self, parent_hash: bytes) -> List[HashedBlock]:
         raise NotImplementedError()
 
-    def get_by_block_num(self, block_num: int) -> Iterator[HashedBlock]:
+    def get_by_block_num(self, block_num: int) -> List[HashedBlock]:
         raise NotImplementedError()
 
-    def get_range(self, start: int, stop: int) -> Iterator[HashedBlock]:
+    def get_range(self, start: int, stop: int) -> List[HashedBlock]:
         raise NotImplementedError()
 
-    def get_all_non_genesis_in_order(self) -> Iterator[HashedBlock]:
+    def get_all_non_genesis_in_order(self) -> List[HashedBlock]:
         raise NotImplementedError()

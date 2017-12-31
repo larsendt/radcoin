@@ -1,6 +1,6 @@
 from core.block import HashedBlock
 from core.chain_storage import BlockChainStorage
-from typing import Iterator, Optional
+from typing import List, Optional
 import apsw
 
 CREATE_TABLE_SQL = """
@@ -124,26 +124,26 @@ class SqliteBlockChainStorage(BlockChainStorage):
         else:
             return zero_blocks[0]
 
-    def get_by_parent_hash(self, parent_hash: bytes) -> Iterator[HashedBlock]:
+    def get_by_parent_hash(self, parent_hash: bytes) -> List[HashedBlock]:
         c = self._conn.cursor()
         c.execute(GET_BY_PARENT_HASH_SQL, (parent_hash,))
-        return map(lambda r: HashedBlock.deserialize(r[0]), c)
+        return list(map(lambda r: HashedBlock.deserialize(r[0]), c))
 
-    def get_by_block_num(self, block_num: int) -> Iterator[HashedBlock]:
+    def get_by_block_num(self, block_num: int) -> List[HashedBlock]:
         c = self._conn.cursor()
         c.execute(GET_BY_NUM_SQL, (block_num,))
-        return map(lambda r: HashedBlock.deserialize(r[0]), c)
+        return list(map(lambda r: HashedBlock.deserialize(r[0]), c))
 
-    def get_range(self, lower: int, upper: int) -> Iterator[HashedBlock]:
+    def get_range(self, lower: int, upper: int) -> List[HashedBlock]:
         args = {
             "lower": lower,
             "upper": upper,
         }
         c = self._conn.cursor()
         c.execute(GET_RANGE_SQL, args)
-        return map(lambda r: HashedBlock.deserialize(r[0]), c)
+        return list(map(lambda r: HashedBlock.deserialize(r[0]), c))
 
-    def get_all_non_genesis_in_order(self) -> Iterator[HashedBlock]:
+    def get_all_non_genesis_in_order(self) -> List[HashedBlock]:
         c = self._conn.cursor()
         c.execute(GET_ALL_NON_GENESIS_IN_ORDER_SQL)
-        return map(lambda r: HashedBlock.deserialize(r[0]), c)
+        return list(map(lambda r: HashedBlock.deserialize(r[0]), c))
