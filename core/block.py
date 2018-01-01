@@ -39,7 +39,6 @@ class Block(Serializable):
         return {
             "block_num": self.block_num,
             "parent_mined_hash": parent_hash,
-            "miner_address": self.mining_addr.serializable(),
             "transactions": list(txns),
             "config": self.block_config.serializable(),
         }
