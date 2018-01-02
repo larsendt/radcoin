@@ -2,7 +2,6 @@ from core.amount import Amount
 from core.block import Block, HashedBlock
 from core.block_config import BlockConfig
 from core.chain import BlockChain
-from core.coin import Coin
 from core.config import Config
 from core.dblog import DBLogger
 from core.difficulty import DEFAULT_DIFFICULTY
@@ -74,7 +73,7 @@ class BlockMiner(object):
 
     def make_reward(self) -> SignedTransaction:
         reward = Transaction(
-                Amount.units(100, Coin.Radcoin),
+                Amount.units(100),
                 Timestamp.now(),
                 None,
                 self.key_pair.address())
