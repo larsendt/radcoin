@@ -1,4 +1,5 @@
 import argparse
+from core.config import Config
 from core.miner import BlockMiner
 from core.key_pair import KeyPair
 from core.network.client import ChainClient
@@ -13,75 +14,75 @@ from typing import Generator
 SERVER_ADDRESS="0.0.0.0"
 SERVER_PORT=8888
 
-def mine(key_pair: KeyPair) -> None:
-    bm = BlockMiner()
+def mine(key_pair: KeyPair, cfg: Config) -> None:
+    bm = BlockMiner(cfg)
     bm.mine_forever()
 
-def client_poll() -> None:
-    client = ChainClient()
+def client_poll(cfg: Config) -> None:
+    client = ChainClient(cfg)
     client.poll_forever()
 
 @gen.coroutine
-def start_miner():
+def start_miner(cfg: Config):
     pool = ProcessPoolExecutor(max_workers=1)
     kp = KeyPair()
-    yield pool.submit(mine, kp)
+    yield pool.submit(mine, kp, cfg)
 
 @gen.coroutine
-def start_client():
+def start_client(cfg: Config):
     pool = ProcessPoolExecutor(max_workers=1)
-    yield pool.submit(client_poll)
-
-def start_server():
-    serv = ChainServer()
-    serv.listen(SERVER_PORT, address=SERVER_ADDRESS)
-
-def mine_genesis():
-    bm = BlockMiner() # pass in a key pair
-    bm.mine_genesis()
+    yield pool.submit(client_poll, cfg)
 
 def main():
     parser = argparse.ArgumentParser("Radcoin does stuff")
-    parser.add_argument("--mine_genesis", default=False)
-    parser.add_argument("--bootstrap", default=False)
-    parser.add_argument("--server", default=False)
-    parser.add_argument("--client", default=False)
-    parser.add_argument("--miner", default=False)
+    parser.add_argument(
+        "--mine_genesis",
+        help="Mine a new genesis block. You probably generally don't want to do this.",
+        default=False,
+        action="store_true")
+
+    parser.add_argument(
+        "--bootstrap",
+        help="Request the genesis block from the network.",
+        default=False,
+        action="store_true")
+
+    parser.add_argument(
+        "--log_level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARN", "ERROR"],
+    )
+
     args = parser.parse_args()
 
-    need_ioloop = False
-    
+    cfg = Config(args.log_level)
+
     if args.mine_genesis:
         if args.bootstrap:
             print("--mine_genesis and --bootstrap are mutually exclusive")
         else:
             print("Mining genesis")
-            mine_genesis()
+            bm = BlockMiner(cfg) # TODO: pass in a key pair
+            bm.mine_genesis()
     elif args.bootstrap:
         if args.mine_genesis:
             print("--mine_genesis and --bootstrap are mutually exclusive")
         else:
             print("Bootstrapping with temp client")
-            c = ChainClient()
+            c = ChainClient(cfg)
             c.bootstrap()
 
-    if args.server:
-        print("Running server")
-        need_ioloop = True
-        start_server()
+    print("Running server")
+    serv = ChainServer(cfg)
+    serv.listen()
 
-    if args.client:
-        print("Running client")
-        need_ioloop = True
-        ioloop.IOLoop.current().spawn_callback(start_client)
+    print("Running client")
+    ioloop.IOLoop.current().spawn_callback(start_client, cfg)
 
-    if args.miner:
-        print("Running miner")
-        need_ioloop = True
-        ioloop.IOLoop.current().spawn_callback(start_miner)
+    print("Running miner")
+    ioloop.IOLoop.current().spawn_callback(start_miner, cfg)
 
-    if need_ioloop:
-        ioloop.IOLoop.current().start()
+    ioloop.IOLoop.current().start()
 
 if __name__ == "__main__":
     main()

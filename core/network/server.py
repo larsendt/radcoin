@@ -1,6 +1,6 @@
 from core.block import HashedBlock
 from core.chain import BlockChain
-from core.config import DB_PATH, LOG_PATH
+from core.config import Config
 from core.dblog import DBLogger
 from core.network import util
 from core.network.peer_list import Peer, PeerList
@@ -21,9 +21,9 @@ class DefaultRequestHandler(web.RequestHandler):
         self.write(d)
 
 class BlockRequestHandler(web.RequestHandler):
-    def initialize(self, chain: BlockChain) -> None:
+    def initialize(self, chain: BlockChain, cfg: Config) -> None:
         self.chain = chain
-        self.l = DBLogger(self, LOG_PATH)
+        self.l = DBLogger(self, cfg)
 
     def get(self) -> None:
         requested_hash = self.get_query_argument("hex_hash", None)
@@ -74,8 +74,8 @@ class BlockRequestHandler(web.RequestHandler):
         self.write(response)
 
 class TransactionRequestHandler(web.RequestHandler):
-    def initialize(self):
-        self.l = DBLogger(self, LOG_PATH)
+    def initialize(self, cfg: Config):
+        self.l = DBLogger(self, cfg)
 
     def get(self) -> None:
         self.write(util.error_response("unimplemented"))
@@ -84,8 +84,8 @@ class TransactionRequestHandler(web.RequestHandler):
         self.write(util.error_response("unimplemented"))
 
 class PeerRequestHandler(web.RequestHandler):
-    def initialize(self, peer_list):
-        self.l = DBLogger(self, LOG_PATH)
+    def initialize(self, peer_list: PeerList, cfg: Config):
+        self.l = DBLogger(self, cfg)
         self.peer_list = peer_list
 
     def get(self) -> None:
@@ -106,25 +106,28 @@ class PeerRequestHandler(web.RequestHandler):
         self.write(util.generic_ok_response())
 
 class ChainServer(object):
-    def __init__(self) -> None:
-        self.l = DBLogger(self, LOG_PATH)
-        self.peer_list = PeerList()
-        self.storage = SqliteBlockChainStorage(DB_PATH)
+    def __init__(self, cfg: Config) -> None:
+        self.l = DBLogger(self, cfg)
+        self.peer_list = PeerList(cfg)
+        self.storage = SqliteBlockChainStorage(cfg)
+        self.peer_info = Peer(
+                cfg.server_listen_addr(),
+                cfg.server_listen_port())
 
         if self.storage.get_genesis() is None:
             raise Exception(
                 "Can't start server without a genesis block in the chain storage.")
 
         self.l.info("Loading existing chain")
-        self.chain = BlockChain.load(self.storage)
+        self.chain = BlockChain.load(self.storage, cfg)
 
         self.app = web.Application([
             web.url(r"/", DefaultRequestHandler),
-            web.url(r"/block", BlockRequestHandler, {"chain": self.chain}),
-            web.url(r"/transaction", TransactionRequestHandler),
-            web.url(r"/peer", PeerRequestHandler, {"peer_list": self.peer_list}),
+            web.url(r"/block", BlockRequestHandler, {"chain": self.chain, "cfg": cfg}),
+            web.url(r"/transaction", TransactionRequestHandler, {"cfg": cfg}),
+            web.url(r"/peer", PeerRequestHandler, {"peer_list": self.peer_list, "cfg": cfg}),
         ])
 
-    def listen(self, port: int, address="") -> None:
-        self.peer_list.add_peer(Peer(address, port))
-        self.app.listen(port, address=address)
+    def listen(self) -> None:
+        self.peer_list.add_peer(self.peer_info)
+        self.app.listen(self.peer_info.port, address=self.peer_info.address)

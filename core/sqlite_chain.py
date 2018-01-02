@@ -1,5 +1,6 @@
 from core.block import HashedBlock
 from core.chain_storage import BlockChainStorage
+from core.config import Config
 from core.dblog import DBLogger
 from typing import List, Optional
 import sqlite3
@@ -52,11 +53,10 @@ GET_HEAD_SQL = "SELECT serialized FROM blocks WHERE is_head=1"
 CLEAR_HEAD_SQL = "UPDATE blocks SET is_head=0 WHERE is_head=1"
 
 class SqliteBlockChainStorage(BlockChainStorage):
-    def __init__(self, db_path: str) -> None:
+    def __init__(self, cfg: Config) -> None:
         super().__init__()
-        self.l = DBLogger(self, db_path)
-        self._path = db_path
-        self._conn = sqlite3.connect(db_path)
+        self.l = DBLogger(self, cfg)
+        self._conn = sqlite3.connect(cfg.chain_db_path())
         with self._conn:
             cursor = self._conn.cursor()
             cursor.execute(CREATE_TABLE_SQL)

@@ -3,7 +3,7 @@ from core.block import Block, HashedBlock
 from core.block_config import BlockConfig
 from core.chain import BlockChain
 from core.coin import Coin
-from core.config import DB_PATH, LOG_PATH
+from core.config import Config
 from core.dblog import DBLogger
 from core.difficulty import DEFAULT_DIFFICULTY
 from core.key_pair import KeyPair
@@ -15,28 +15,29 @@ import time
 from typing import Optional
 
 class BlockMiner(object):
-    def __init__(self, key_pair: Optional[KeyPair] = None) -> None:
-        self.l = DBLogger(self, LOG_PATH)
+    def __init__(self, cfg: Config, key_pair: Optional[KeyPair] = None) -> None:
+        self.l = DBLogger(self, cfg)
+        self.cfg = cfg
 
         if key_pair is None:
             self.key_pair = KeyPair()
         else:
             self.key_pair = key_pair
 
-        self.storage = SqliteBlockChainStorage(DB_PATH)
+        self.storage = SqliteBlockChainStorage(cfg)
         self.chain: Optional[BlockChain] = None
 
         if self.storage.get_genesis() is None:
             self.l.error("Storage has no genesis, either bootstrap with the client or mine a genesis block")
         else:
             self.l.info("Loading existing chain")
-            self.chain = BlockChain.load(self.storage)
+            self.chain = BlockChain.load(self.storage, cfg)
 
     def mine_genesis(self) -> None:
         if self.storage.get_genesis() is None:
             self.l.info("Making a new chain")
             genesis = self.make_genesis()
-            self.chain = BlockChain.new(self.storage, genesis)
+            self.chain = BlockChain.new(self.storage, genesis, self.cfg)
         else:
             self.l.info("Storage already has genesis, no need to mine it")
 

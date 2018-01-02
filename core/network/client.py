@@ -1,6 +1,6 @@
 from core.block import HashedBlock
 from core.chain import BlockChain
-from core.config import DB_PATH, LOG_PATH
+from core.config import Config
 from core.dblog import DBLogger
 from core.network.peer_list import Peer, PeerList
 from core.sqlite_chain import SqliteBlockChainStorage
@@ -11,15 +11,16 @@ import time
 from typing import Any, Dict, Optional
 
 class ChainClient(object):
-    def __init__(self) -> None:
-        self.l = DBLogger(self, LOG_PATH)
+    def __init__(self, cfg: Config) -> None:
+        self.l = DBLogger(self, cfg)
         self.l.info("Init")
-        self.peer_list = PeerList()
-        self.storage = SqliteBlockChainStorage(DB_PATH)
+        self.peer_list = PeerList(cfg)
+        self.storage = SqliteBlockChainStorage(cfg)
         self.chain: Optional[BlockChain] = None
+        self.cfg = cfg
 
         if self.storage.get_genesis():
-            self.chain = BlockChain.load(self.storage)
+            self.chain = BlockChain.load(self.storage, cfg)
         else:
             self.l.warn("Storage has no genesis, either bootstrap via the client or mine a genesis block")
 
@@ -29,11 +30,11 @@ class ChainClient(object):
     def bootstrap(self) -> None:
         if self.storage.get_genesis():
             self.l.info("Already have genesis, no bootstrap needed")
-            self.chain = BlockChain.load(self.storage)
+            self.chain = BlockChain.load(self.storage, self.cfg)
         else:
             self.l.info("Requesting genesis block")
             genesis = self.request_genesis()
-            self.chain = BlockChain.new(self.storage, genesis)
+            self.chain = BlockChain.new(self.storage, genesis, self.cfg)
             self.l.info("Got genesis block")
 
     def request_genesis(self) -> HashedBlock:

@@ -1,4 +1,4 @@
-from core.config import PEER_DB_PATH, LOG_PATH
+from core.config import Config
 from core.dblog import DBLogger
 import random
 import sqlite3
@@ -9,7 +9,7 @@ CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS peers (
     id INTEGER NOT NULL PRIMARY KEY,
     address TEXT NOT NULL,
-    port INTEGER NOT NULL,
+    port INTEGER NOT NULL,Config
     last_seen_unix_millis INTEGER NOT NULL,
     active INTEGER NOT NULL
 )
@@ -57,9 +57,9 @@ class Peer(object):
         return self.__str__()
 
 class PeerList(object):
-    def __init__(self) -> None:
-        self.l = DBLogger(self, LOG_PATH)
-        self._conn = sqlite3.connect(PEER_DB_PATH)
+    def __init__(self, cfg: Config) -> None:
+        self.l = DBLogger(self, cfg)
+        self._conn = sqlite3.connect(cfg.peer_db_path())
 
         self._conn.execute(CREATE_TABLE_SQL)
         self._conn.commit()

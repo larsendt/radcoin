@@ -1,6 +1,6 @@
 from core.block import HashedBlock
 from core.chain_storage import BlockChainStorage
-from core.config import LOG_PATH
+from core.config import Config
 from core.dblog import DBLogger
 from core import difficulty
 from core.difficulty import DEFAULT_DIFFICULTY, difficulty_adjustment
@@ -27,18 +27,19 @@ class BlockChain(object):
     def __init__(
             self,
             genesis_block: HashedBlock,
-            storage: BlockChainStorage) -> None:
+            storage: BlockChainStorage,
+            cfg: Config) -> None:
 
         self.storage = storage
-        self.l = DBLogger(self, LOG_PATH)
+        self.l = DBLogger(self, cfg)
 
     @staticmethod
-    def load(storage: BlockChainStorage) -> "BlockChain":
+    def load(storage: BlockChainStorage, cfg: Config) -> "BlockChain":
         genesis = storage.get_genesis()
         if genesis is None:
             raise NoGenesisBlockError("No genesis block in storage")
 
-        bc = BlockChain(genesis, storage)
+        bc = BlockChain(genesis, storage, cfg)
         bc.l.info("Loading existing chain, validating blocks")
         for b in storage.get_all_non_genesis_in_order():
             bc.validate_block(b)
@@ -46,12 +47,15 @@ class BlockChain(object):
         return bc
 
     @staticmethod
-    def new(storage: BlockChainStorage, genesis_block: HashedBlock) -> "BlockChain":
+    def new(
+        storage: BlockChainStorage,
+        genesis_block: HashedBlock,
+        cfg: Config) -> "BlockChain":
         if storage.get_genesis() is not None:
             raise MultipleGenesisBlockError("Already have a genesis block in storage!")
 
         storage.add_block(genesis_block)
-        bc = BlockChain(genesis_block, storage)
+        bc = BlockChain(genesis_block, storage, cfg)
 
         bc.l.info("New chain, added genesis {} to storage".format(
             genesis_block.mining_hash().hex()))
@@ -113,7 +117,7 @@ class BlockChain(object):
 
         segment = self.storage.get_range(seg_start, seg_stop)
         times = map(lambda b: b.mining_timestamp, segment)
-        adjustment = difficulty_adjustment(times)
+        adjustment = difficulty_adjustment(times, self.l)
         new_difficulty = current_difficulty + adjustment
         self.l.debug("Tuning difficulty:", new_difficulty)
 

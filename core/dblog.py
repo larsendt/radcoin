@@ -1,10 +1,11 @@
-import sqlite3
 import arrow
-import traceback
-from typing import Any, Optional, Tuple, Union
+from core.config import Config
 import os
+import sqlite3
+import traceback
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-LEVEL = "INFO"
+LEVEL = "DEBUG"
 
 TIME_FMT = "YYYY-MM-DDTHH:mm:ssZ"
 
@@ -28,8 +29,10 @@ class DBLogger(object):
     INFO = "INFO"
     WARN = "WARN"
     ERROR = "ERROR"
+    LOG_LEVELS: List[str] = [DEBUG, INFO, WARN, ERROR]
+    LOG_ORDER: Dict[str, int] = {DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3}
 
-    def __init__(self, source: Union[str, object], db_path: str) -> None:
+    def __init__(self, source: Union[str, object], cfg: Config) -> None:
         if isinstance(source, str):
             self.source = source
         elif isinstance(source, object):
@@ -37,27 +40,23 @@ class DBLogger(object):
         else:
             raise TypeError("Bad source type", type(source))
 
-        self._db_path = db_path
-        self._conn = sqlite3.connect(db_path)
+        self._conn = sqlite3.connect(cfg.log_db_path())
+        self.log_level = cfg.log_level()
         with self._conn:
             c = self._conn.cursor()
             c.execute(CREATE_LOG_TABLE)
     
     def debug(self, *args: Any, exc: Optional[Exception] = None) -> None:
-        if LEVEL == "DEBUG":
-            self.log(self.DEBUG, args, exc)
+        self.log(self.DEBUG, args, exc)
 
     def info(self, *args: Any, exc: Optional[Exception] = None) -> None:
-        if LEVEL in ("DEBUG", "INFO"):
-            self.log(self.INFO, args, exc)
+        self.log(self.INFO, args, exc)
 
     def warn(self, *args: Any, exc: Optional[Exception] = None) -> None:
-        if LEVEL in ("DEBUG", "INFO", "WARN"):
-            self.log(self.WARN, args, exc)
+        self.log(self.WARN, args, exc)
 
     def error(self, *args: Any, exc: Optional[Exception] = None) -> None:
-        if LEVEL in ("DEBUG", "INFO", "WARN", "ERROR"):
-            self.log(self.ERROR, args, exc)
+        self.log(self.ERROR, args, exc)
 
     def log(self, level: str, msg_args: Tuple[Any, ...], exc: Optional[Exception] = None) -> None:
         pid = os.getpid()
@@ -72,7 +71,8 @@ class DBLogger(object):
         else:
             exc_str = None
 
-        print(print_msg)
+        if self.LOG_ORDER[level] >= self.LOG_ORDER[self.log_level]:
+            print(print_msg)
 
         log_args = {
             "unix_millis": int(now.timestamp * 1000),
