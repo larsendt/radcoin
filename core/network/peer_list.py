@@ -70,10 +70,16 @@ class PeerList(object):
         self.gateway_peer = Peer(
                 cfg.gateway_address(),
                 cfg.gateway_port())
+        self.self_peer = Peer(
+                cfg.server_listen_addr(),
+                cfg.server_listen_port())
         self.add_peer(self.gateway_peer)
 
     def add_peer(self, peer: Peer) -> None:
-        if self.has_peer(peer):
+        if peer == self.self_peer:
+            self.l.debug("Not adding self peer")
+            return
+        elif self.has_peer(peer):
             self.l.debug("Update peer:", peer)
             self._update_peer(peer)
         else:
