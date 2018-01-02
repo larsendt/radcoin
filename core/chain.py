@@ -81,6 +81,19 @@ class BlockChain(object):
         else:
             raise InvalidBlockError("Block is invalid")
 
+    @staticmethod
+    def genesis_is_valid(block: HashedBlock) -> bool:
+        if block.block_num() != 0:
+            return False
+
+        if not block.hash_meets_difficulty():
+            return False
+
+        if len(block.block.transactions) != 0:
+            return False
+
+        return True
+
     def block_is_valid(self, block: HashedBlock) -> bool:
         if self.storage.has_hash(block.parent_mining_hash()):
             parent = self.storage.get_by_hash(block.parent_mining_hash())
@@ -133,6 +146,9 @@ class BlockChain(object):
                     signed.signature))
             return False
 
+        if signed.is_reward():
+            return self.reward_is_valid(signed)
+
         output_sum = Amount(0)
         for output in signed.transaction.outputs:
             output_sum += output.amount
@@ -155,6 +171,10 @@ class BlockChain(object):
                 output_sum, claimed_sum))
             return False
 
+        return True
+
+    def reward_is_valid(self, reward: SignedTransaction) -> bool:
+        # TODO
         return True
 
     def get_transaction_output(

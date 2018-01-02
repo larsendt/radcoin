@@ -77,11 +77,10 @@ class BlockMiner(object):
         return SignedTransaction.sign(reward, self.key_pair)
 
     def make_genesis(self) -> HashedBlock:
-        t = self.make_reward()
         b = Block(
             0, # block num 
             None, # parent hash
             BlockConfig(DEFAULT_DIFFICULTY),
-            [t])
+            [])
         return HashedBlock(b)
 
