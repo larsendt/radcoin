@@ -113,6 +113,7 @@ class ChainServer(object):
         self.peer_info = Peer(
                 cfg.server_listen_addr(),
                 cfg.server_listen_port())
+        self.advertize_self = cfg.advertize_self()
 
         if self.storage.get_genesis() is None:
             raise Exception(
@@ -129,5 +130,10 @@ class ChainServer(object):
         ])
 
     def listen(self) -> None:
-        self.peer_list.add_peer(self.peer_info)
+        if self.advertize_self:
+            self.l.info("Advertizing self as peer")
+            self.peer_list.add_peer(self.peer_info)
+        else:
+            self.l.info("Not advertizing self as peer")
+
         self.app.listen(self.peer_info.port, address=self.peer_info.address)

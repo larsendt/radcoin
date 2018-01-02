@@ -53,9 +53,22 @@ def main():
         choices=["DEBUG", "INFO", "WARN", "ERROR"],
     )
 
+    parser.add_argument(
+        "--listen_addr",
+        help="Have the server listen on this addr and advertize it to the network.",
+        required=True)
+
+    parser.add_argument(
+        "--no_advertize_self",
+        help="If set, don't advertize ourselves as a peer.",
+        action="store_false",
+        default=True)
+
     args = parser.parse_args()
 
-    cfg = Config(args.log_level)
+    print(args)
+
+    cfg = Config(args.log_level, args.listen_addr, args.no_advertize_self)
 
     if args.mine_genesis:
         if args.bootstrap:

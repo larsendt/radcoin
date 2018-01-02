@@ -1,6 +1,12 @@
 class Config(object):
-    def __init__(self, log_level: str) -> None:
+    def __init__(
+        self,
+        log_level: str,
+        listen_addr: str,
+        advertize_self: bool) -> None:
         self._log_level = log_level
+        self._listen_addr = listen_addr
+        self._advertize_self = advertize_self
 
     def log_level(self) -> str:
         return self._log_level
@@ -15,7 +21,7 @@ class Config(object):
         return "peers.sqlite"
 
     def server_listen_addr(self) -> str:
-        return "0.0.0.0"
+        return self._listen_addr
 
     def server_listen_port(self) -> int:
         return 8888
@@ -25,3 +31,6 @@ class Config(object):
 
     def gateway_port(self) -> int:
         return 8888
+
+    def advertize_self(self) -> bool:
+        return self.advertize_self
