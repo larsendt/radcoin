@@ -9,7 +9,7 @@ CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS peers (
     id INTEGER NOT NULL PRIMARY KEY,
     address TEXT NOT NULL,
-    port INTEGER NOT NULL,Config
+    port INTEGER NOT NULL,
     last_seen_unix_millis INTEGER NOT NULL,
     active INTEGER NOT NULL
 )
