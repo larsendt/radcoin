@@ -78,7 +78,7 @@ class HashedBlock(Serializable):
         self.mining_timestamp = Timestamp.now()
 
     def mining_hash(self) -> Hash:
-        v = self.block.sha256().sha256 + self.mining_entropy
+        v = self.block.sha256().raw_sha256 + self.mining_entropy
         return Hash(hashlib.sha256(v).digest())
 
     def parent_mining_hash(self) -> Hash:
@@ -88,7 +88,7 @@ class HashedBlock(Serializable):
         return self.block.block_num
 
     def hash_meets_difficulty(self) -> bool:
-        h = self.mining_hash().sha256
+        h = self.mining_hash().raw_sha256
         zero_bytes = self.block.block_config.difficulty // 8
         zero_bits = self.block.block_config.difficulty - (zero_bytes * 8)
         one_bits = 8 - zero_bits

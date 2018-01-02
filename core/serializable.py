@@ -28,18 +28,18 @@ class Serializable(object):
         return Hash(m.digest())
 
 class Hash(Serializable):
-    def __init__(self, sha256: bytes) -> None:
-        self.sha256 = sha256
+    def __init__(self, raw_sha256: bytes) -> None:
+        self.raw_sha256 = raw_sha256
 
     @staticmethod
     def fromhex(hash_hex: str) -> 'Hash':
         return Hash(bytes.fromhex(hash_hex))
 
     def hex(self) -> str:
-        return self.sha256.hex()
+        return self.raw_sha256.hex()
 
     def __str__(self) -> str:
-        return "Hash<hex_sha256={}>".format(self.sha256)
+        return "Hash<hex_sha256={}>".format(self.raw_sha256)
 
     def serializable(self) -> Ser:
         return {
