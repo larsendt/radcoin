@@ -61,7 +61,6 @@ class BlockMiner(object):
             parent.block_num()+1,
             parent.mining_hash(),
             config,
-            self.key_pair.address(),
             [reward])
         hb = HashedBlock(block)
 
@@ -88,7 +87,6 @@ class BlockMiner(object):
             0, # block num 
             None, # parent hash
             BlockConfig(DEFAULT_DIFFICULTY),
-            self.key_pair.address(),
             [t])
         return HashedBlock(b)
 

@@ -12,7 +12,6 @@ class Block(Serializable):
             block_num,
             parent_mining_hash: Optional[bytes],
             config: BlockConfig,
-            mining_addr: Address,
             transactions: List[SignedTransaction]) -> None:
 
         if parent_mining_hash is None:
@@ -25,7 +24,6 @@ class Block(Serializable):
         self.block_num = block_num
         self.block_config = config
         self.parent_mining_hash = parent_mining_hash
-        self.mining_addr = mining_addr
         self.transactions = transactions
 
     def serializable(self) -> Ser:
@@ -50,10 +48,9 @@ class Block(Serializable):
             parent_hash: bytes = bytes.fromhex(obj["parent_mined_hash"])
         else:
             parent_hash = None
-        miner_addr = Address.from_dict(obj["miner_address"])
         txns = list(map(lambda o: SignedTransaction.from_dict(o), obj["transactions"]))
         config = BlockConfig.from_dict(obj["config"])
-        return Block(block_num, parent_hash, config, miner_addr, txns)
+        return Block(block_num, parent_hash, config, txns)
 
 class HashedBlock(Serializable):
     def __init__(
