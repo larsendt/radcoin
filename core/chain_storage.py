@@ -1,4 +1,5 @@
 from core.block import HashedBlock
+from core.serializable import Hash
 from typing import List, Optional
 
 class BlockChainStorage(object):
@@ -8,7 +9,7 @@ class BlockChainStorage(object):
     def add_block(self, block: HashedBlock) -> None:
         raise NotImplementedError()
 
-    def get_by_hash(self, block_hash: bytes) -> HashedBlock:
+    def get_by_hash(self, block_hash: Hash) -> HashedBlock:
         raise NotImplementedError()
 
     def get_height(self) -> int:
@@ -17,13 +18,13 @@ class BlockChainStorage(object):
     def get_head(self) -> HashedBlock:
         raise NotImplementedError()
 
-    def has_hash(self, block_hash: bytes) -> bool:
+    def has_hash(self, block_hash: Hash) -> bool:
         raise NotImplementedError()
 
     def get_genesis(self) -> Optional[HashedBlock]:
         raise NotImplementedError()
 
-    def get_by_parent_hash(self, parent_hash: bytes) -> List[HashedBlock]:
+    def get_by_parent_hash(self, parent_hash: Hash) -> List[HashedBlock]:
         raise NotImplementedError()
 
     def get_by_block_num(self, block_num: int) -> List[HashedBlock]:

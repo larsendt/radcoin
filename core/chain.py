@@ -5,6 +5,7 @@ from core.config import Config
 from core.dblog import DBLogger
 from core import difficulty
 from core.difficulty import DEFAULT_DIFFICULTY, difficulty_adjustment
+from core.serializable import Hash
 from core.transaction.signed_transaction import SignedTransaction
 from core.transaction.transaction_output import TransactionOutput
 from typing import Dict, Iterator, Optional, List
@@ -158,7 +159,7 @@ class BlockChain(object):
 
     def get_transaction_output(
         self,
-        block_hash: bytes,
+        block_hash: Hash,
         output_id: int) -> Optional[TransactionOutput]:
 
         block = self.storage.get_by_hash(block_hash)

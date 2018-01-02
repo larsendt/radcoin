@@ -2,6 +2,7 @@ from core.block import HashedBlock
 from core.chain_storage import BlockChainStorage
 from core.config import Config
 from core.dblog import DBLogger
+from core.serializable import Hash
 from typing import List, Optional
 import sqlite3
 
@@ -111,18 +112,18 @@ class SqliteBlockChainStorage(BlockChainStorage):
         res = c.fetchone()
         return res[0]
 
-    def get_by_hash(self, block_hash: bytes) -> Optional[HashedBlock]:
+    def get_by_hash(self, block_hash: Hash) -> Optional[HashedBlock]:
         c = self._conn.cursor()
-        c.execute(GET_BY_HASH_SQL, (block_hash,))
+        c.execute(GET_BY_HASH_SQL, (block_hash.sha256,))
         res = c.fetchone()
         if res:
             return HashedBlock.deserialize(res[0])
         else:
             return None
 
-    def has_hash(self, block_hash: bytes) -> bool:
+    def has_hash(self, block_hash: Hash) -> bool:
         c = self._conn.cursor()
-        c.execute(GET_BY_HASH_SQL, (block_hash,))
+        c.execute(GET_BY_HASH_SQL, (block_hash.sha256,))
         return c.fetchone() is not None 
 
     def get_genesis(self) -> Optional[HashedBlock]:
@@ -134,9 +135,9 @@ class SqliteBlockChainStorage(BlockChainStorage):
         else:
             return zero_blocks[0]
 
-    def get_by_parent_hash(self, parent_hash: bytes) -> List[HashedBlock]:
+    def get_by_parent_hash(self, parent_hash: Hash) -> List[HashedBlock]:
         c = self._conn.cursor()
-        c.execute(GET_BY_PARENT_HASH_SQL, (parent_hash,))
+        c.execute(GET_BY_PARENT_HASH_SQL, (parent_hash.sha256,))
         return list(map(lambda r: HashedBlock.deserialize(r[0]), c))
 
     def get_by_block_num(self, block_num: int) -> List[HashedBlock]:

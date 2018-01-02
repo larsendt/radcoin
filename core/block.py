@@ -1,6 +1,6 @@
 from core.block_config import BlockConfig
 from core.key_pair import Address
-from core.serializable import Serializable, Ser
+from core.serializable import Hash, Serializable, Ser
 from core.timestamp import Timestamp
 from core.transaction.signed_transaction import SignedTransaction
 import hashlib
@@ -10,7 +10,7 @@ class Block(Serializable):
     def __init__(
             self,
             block_num,
-            parent_mining_hash: Optional[bytes],
+            parent_mining_hash: Optional[Hash],
             config: BlockConfig,
             transactions: List[SignedTransaction]) -> None:
 
@@ -36,7 +36,7 @@ class Block(Serializable):
         if self.parent_mining_hash is None:
             parent_hash = None
         else:
-            parent_hash = self.parent_mining_hash.hex()
+            parent_hash = self.parent_mining_hash.serializable()
 
         return {
             "block_num": self.block_num,
@@ -49,7 +49,7 @@ class Block(Serializable):
     def from_dict(obj: Ser) -> 'Block':
         block_num = obj["block_num"]
         if obj["parent_mined_hash"] is not None:
-            parent_hash: bytes = bytes.fromhex(obj["parent_mined_hash"])
+            parent_hash = Hash.from_dict(obj["parent_mined_hash"])
         else:
             parent_hash = None
         txns = list(map(lambda o: SignedTransaction.from_dict(o), obj["transactions"]))
@@ -77,18 +77,18 @@ class HashedBlock(Serializable):
         self.mining_entropy = new_entropy
         self.mining_timestamp = Timestamp.now()
 
-    def mining_hash(self) -> bytes:
-        v = self.block.sha256() + self.mining_entropy
-        return hashlib.sha256(v).digest()
+    def mining_hash(self) -> Hash:
+        v = self.block.sha256().sha256 + self.mining_entropy
+        return Hash(hashlib.sha256(v).digest())
 
-    def parent_mining_hash(self) -> bytes:
+    def parent_mining_hash(self) -> Hash:
         return self.block.parent_mining_hash
 
     def block_num(self) -> int:
         return self.block.block_num
 
     def hash_meets_difficulty(self) -> bool:
-        h = self.mining_hash()
+        h = self.mining_hash().sha256
         zero_bytes = self.block.block_config.difficulty // 8
         zero_bits = self.block.block_config.difficulty - (zero_bytes * 8)
         one_bits = 8 - zero_bits
@@ -106,7 +106,7 @@ class HashedBlock(Serializable):
         return {
             "block": self.block.serializable(),
             "mining_entropy": self.mining_entropy.hex(),
-            "mined_hash": self.mining_hash().hex(),
+            "mined_hash": self.mining_hash().serializable(),
             "mining_timestamp": self.mining_timestamp.serializable(),
         }
 

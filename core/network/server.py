@@ -4,6 +4,7 @@ from core.config import Config
 from core.dblog import DBLogger
 from core.network import util
 from core.network.peer_list import Peer, PeerList
+from core.serializable import Hash
 from core.sqlite_chain import SqliteBlockChainStorage
 from core.transaction.signed_transaction import SignedTransaction
 import json
@@ -30,7 +31,7 @@ class BlockRequestHandler(web.RequestHandler):
         requested_block_num = self.get_query_argument("block_num", None)
 
         if requested_hash is not None:
-            self.get_by_hash(bytes.fromhex(requested_hash))
+            self.get_by_hash(Hash.fromhex(requested_hash))
         elif requested_block_num is not None:
             self.get_by_block_num(int(requested_block_num))
         else:
@@ -57,7 +58,7 @@ class BlockRequestHandler(web.RequestHandler):
         self.set_status(200)
         self.write(util.generic_ok_response())
 
-    def get_by_hash(self, mining_hash: bytes) -> None:
+    def get_by_hash(self, mining_hash: Hash) -> None:
         block = self.chain.storage.get_by_hash(mining_hash)
 
         if block:
@@ -107,6 +108,18 @@ class PeerRequestHandler(web.RequestHandler):
         self.set_status(200)
         self.write(util.generic_ok_response())
 
+class ChainRequestHandler(web.RequestHandler):
+    def initialize(self, chain: BlockChain, cfg: Config):
+        self.l = DBLogger(self, cfg)
+        self.chain = chain
+
+    def get(self) -> None:
+        h = self.chain.get_head()
+        resp = {
+            "height": h.block_num(),
+            "head_hex_hash": h.mining_hash().hex(),
+        }
+
 class ChainServer(object):
     def __init__(self, cfg: Config) -> None:
         self.l = DBLogger(self, cfg)
@@ -129,6 +142,7 @@ class ChainServer(object):
             web.url(r"/block", BlockRequestHandler, {"chain": self.chain, "cfg": cfg}),
             web.url(r"/transaction", TransactionRequestHandler, {"cfg": cfg}),
             web.url(r"/peer", PeerRequestHandler, {"peer_list": self.peer_list, "cfg": cfg}),
+            web.url(r"/chain", ChainRequestHandler, {"cfg": cfg, "chain": self.chain}),
         ])
 
     def listen(self) -> None:

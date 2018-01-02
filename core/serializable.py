@@ -21,8 +21,32 @@ class Serializable(object):
         obj = self.serializable()
         return json.dumps(obj, sort_keys=True).encode("utf-8")
 
-    def sha256(self) -> bytes:
+    def sha256(self) -> 'Hash':
         ser = self.serialize()
         m = hashlib.sha256()
         m.update(ser)
-        return m.digest()
+        return Hash(m.digest())
+
+class Hash(Serializable):
+    def __init__(self, sha256: bytes) -> None:
+        self.sha256 = sha256
+
+    @staticmethod
+    def fromhex(hash_hex: str) -> 'Hash':
+        return Hash(bytes.fromhex(hash_hex))
+
+    def hex(self) -> str:
+        return self.sha256.hex()
+
+    def __str__(self) -> str:
+        return "Hash<hex_sha256={}>".format(self.sha256)
+
+    def serializable(self) -> Ser:
+        return {
+            "sha256_hex": self.hex(),
+        }
+
+    @staticmethod
+    def from_dict(obj: Ser) -> 'Hash':
+        return Hash(bytes.fromhex(obj["sha256_hex"]))
+
