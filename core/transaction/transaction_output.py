@@ -19,5 +19,5 @@ class TransactionOutput(Serializable):
     def from_dict(obj: Ser) -> 'TransactionOutput':
         return TransactionOutput(
             obj["output_id"],
-            obj["amount"],
-            obj["to_addr"])
+            Amount.from_dict(obj["amount"]),
+            Address.from_dict(obj["to_addr"]))
