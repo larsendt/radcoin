@@ -87,7 +87,7 @@ class SqliteBlockChainStorage(BlockChainStorage):
 
             args = {
                 "hash": block.mining_hash(),
-                "parent_hash": block.parent_mining_hash(),
+                "parent_hash": block.parent_mining_hash().sha256,
                 "block_num": block.block_num(),
                 "is_head": is_head,
                 "serialized": block.serialize(),
