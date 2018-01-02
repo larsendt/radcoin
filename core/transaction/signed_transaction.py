@@ -13,6 +13,10 @@ class SignedTransaction(Serializable):
         sig = key_pair.sign(transaction.serialize())
         return SignedTransaction(transaction, sig)
 
+    def is_reward(self) -> bool:
+        return (len(self.transaction.inputs) == 0
+                and len(self.transaction.outputs) == 1)
+
     def signature_is_valid(self) -> bool:
         return self.transaction.claimer.signature_is_valid(
                 self.transaction.serialize(),

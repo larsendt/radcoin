@@ -26,6 +26,10 @@ class Block(Serializable):
         self.parent_mining_hash = parent_mining_hash
         self.transactions = transactions
 
+    def __str__(self) -> str:
+        return "Block<num={},parent={}>".format(
+            self.block_num, self.parent_mining_hash)
+
     def serializable(self) -> Ser:
         txns = map(lambda t: t.serializable(), self.transactions)
         
@@ -65,6 +69,10 @@ class HashedBlock(Serializable):
         else:
             self.mining_timestamp = mining_timestamp
 
+    def __str__(self) -> str:
+        return "HashedBlock<num={},hash={}>".format(
+            self.block_num(), self.mining_hash())
+
     def replace_mining_entropy(self, new_entropy: bytes) -> None:
         self.mining_entropy = new_entropy
         self.mining_timestamp = Timestamp.now()
@@ -78,10 +86,6 @@ class HashedBlock(Serializable):
 
     def block_num(self) -> int:
         return self.block.block_num
-
-    def is_valid(self) -> bool:
-        # todo...
-        return True
 
     def hash_meets_difficulty(self) -> bool:
         h = self.mining_hash()

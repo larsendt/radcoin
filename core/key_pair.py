@@ -10,6 +10,12 @@ class Address(Serializable):
         super().__init__()
         self._verify_key = verify_key
 
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Address):
+            return self._verify_key == other._verify_key
+        else:
+            return False
+
     @staticmethod
     def from_hex(hex_verify_key: bytes) -> 'Address':
         key = nacl.signing.VerifyKey(
