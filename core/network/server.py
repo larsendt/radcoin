@@ -52,6 +52,7 @@ class BlockRequestHandler(web.RequestHandler):
             self.write(util.error_response("unknown parent"))
             return
 
+        self.l.info("New block", hb.block_num(), hb.mining_hash())
         self.chain.add_block(hb)
         self.set_status(200)
         self.write(util.generic_ok_response())
@@ -100,6 +101,7 @@ class PeerRequestHandler(web.RequestHandler):
 
         for peer in peers["peers"]:
             p = Peer(peer["address"], peer["port"])
+            self.l.info("New peer", p)
             self.peer_list.add_peer(p)
 
         self.set_status(200)

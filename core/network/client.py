@@ -68,6 +68,7 @@ class ChainClient(object):
         all_peers = self.peer_list.get_all_active_peers()
         payload = {"peers": list(map(lambda p: p.serializable(), all_peers))}
         for peer in all_peers:
+            self.l.info("Telling peer {} about peers".format(peer))
             self._peer_post(peer, "/peer", payload)
 
     def poll_forever(self) -> None:
