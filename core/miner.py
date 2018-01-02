@@ -8,7 +8,8 @@ from core.difficulty import DEFAULT_DIFFICULTY
 from core.key_pair import KeyPair
 from core.sqlite_chain import SqliteBlockChainStorage
 from core.timestamp import Timestamp
-from core.transaction import Transaction, SignedTransaction
+from core.transaction.transaction import Transaction
+from core.transaction.signed_transaction import SignedTransaction
 import os
 import time
 from typing import Optional
@@ -72,12 +73,7 @@ class BlockMiner(object):
         return None
 
     def make_reward(self) -> SignedTransaction:
-        reward = Transaction(
-                Amount.units(100),
-                Timestamp.now(),
-                None,
-                self.key_pair.address())
-
+        reward = Transaction.reward(Amount.units(100), self.key_pair.address())
         return SignedTransaction.sign(reward, self.key_pair)
 
     def make_genesis(self) -> HashedBlock:

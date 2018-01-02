@@ -4,7 +4,7 @@ from core.config import Config
 from core.dblog import DBLogger
 from core.network.peer_list import Peer, PeerList
 from core.sqlite_chain import SqliteBlockChainStorage
-from core.transaction import SignedTransaction
+from core.transaction.signed_transaction import SignedTransaction
 import json
 import requests
 import time

@@ -2,7 +2,7 @@ from core.block_config import BlockConfig
 from core.key_pair import Address
 from core.serializable import Serializable, Ser
 from core.timestamp import Timestamp
-from core.transaction import SignedTransaction
+from core.transaction.signed_transaction import SignedTransaction
 import hashlib
 from typing import List, Optional
 
