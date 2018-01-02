@@ -119,7 +119,7 @@ class SqliteBlockChainStorage(BlockChainStorage):
 
     def get_by_hash(self, block_hash: Hash) -> Optional[HashedBlock]:
         c = self._conn.cursor()
-        c.execute(GET_BY_HASH_SQL, (block_hash.sha256,))
+        c.execute(GET_BY_HASH_SQL, (block_hash.raw_sha256,))
         res = c.fetchone()
         if res:
             return HashedBlock.deserialize(res[0])
@@ -128,7 +128,7 @@ class SqliteBlockChainStorage(BlockChainStorage):
 
     def has_hash(self, block_hash: Hash) -> bool:
         c = self._conn.cursor()
-        c.execute(GET_BY_HASH_SQL, (block_hash.sha256,))
+        c.execute(GET_BY_HASH_SQL, (block_hash.raw_sha256,))
         return c.fetchone() is not None 
 
     def get_genesis(self) -> Optional[HashedBlock]:
@@ -142,7 +142,7 @@ class SqliteBlockChainStorage(BlockChainStorage):
 
     def get_by_parent_hash(self, parent_hash: Hash) -> List[HashedBlock]:
         c = self._conn.cursor()
-        c.execute(GET_BY_PARENT_HASH_SQL, (parent_hash.sha256,))
+        c.execute(GET_BY_PARENT_HASH_SQL, (parent_hash.raw_sha256,))
         return list(map(lambda r: HashedBlock.deserialize(r[0]), c))
 
     def get_by_block_num(self, block_num: int) -> List[HashedBlock]:
