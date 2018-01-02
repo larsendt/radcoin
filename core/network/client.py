@@ -57,7 +57,7 @@ class ChainClient(object):
                 self.l.warn("got a non-genesis block from peer")
                 continue
             
-            if not BlockChain.genesis_is_valid(block):
+            if not BlockChain.genesis_is_valid(block, self.l):
                 self.l.warn("got an invalid genesis block from peer")
                 continue
 

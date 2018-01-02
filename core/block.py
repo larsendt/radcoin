@@ -95,9 +95,11 @@ class HashedBlock(Serializable):
 
         for i in range(0, zero_bytes):
             if h[i] != 0:
+                print("Difficulty mismatch, only got {} bytes of difficulty".format(
+                    i-1))
                 return False
 
-        if h[zero_bytes] > 2**one_bits:
+        if h[zero_bytes] > ((2**one_bits) - 1):
             return False
         else:
             return True

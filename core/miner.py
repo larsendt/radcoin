@@ -82,5 +82,7 @@ class BlockMiner(object):
             None, # parent hash
             BlockConfig(DEFAULT_DIFFICULTY),
             [])
-        return HashedBlock(b)
-
+        hb = HashedBlock(b)
+        while not hb.hash_meets_difficulty():
+            hb.replace_mining_entropy(os.urandom(32))
+        return hb

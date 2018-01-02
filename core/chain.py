@@ -82,14 +82,17 @@ class BlockChain(object):
             raise InvalidBlockError("Block is invalid")
 
     @staticmethod
-    def genesis_is_valid(block: HashedBlock) -> bool:
+    def genesis_is_valid(block: HashedBlock, l: DBLogger) -> bool:
         if block.block_num() != 0:
+            l.warn("block num is not zero")
             return False
 
         if not block.hash_meets_difficulty():
+            l.warn("hash doesn't meet difficulty")
             return False
 
         if len(block.block.transactions) != 0:
+            l.warn("genesis block has transactions")
             return False
 
         return True
