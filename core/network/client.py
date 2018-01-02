@@ -47,7 +47,6 @@ class ChainClient(object):
             if resp_body:
                 self.l.debug("resp body", resp_body)
             else:
-                self.l.warn("no response from peer", peer)
                 continue
 
             obj = json.loads(resp_body)
@@ -90,6 +89,7 @@ class ChainClient(object):
             r = requests.get(url, params=params)
             return r.content
         except requests.exceptions.ConnectionError as e:
+            self.l.warn("No response from peer", peer)
             # todo: mark peer as inactive
             self.l.debug("Error from peer", peer, exc=e)
             return None
@@ -106,5 +106,6 @@ class ChainClient(object):
             r = requests.post(url, json=payload)
             self.l.debug(r.content)
         except requests.exceptions.ConnectionError as e:
+            self.l.warn("No response from peer", peer)
             # todo: mark peer as inactive
             self.l.debug("Error from peer", peer, exc=e)
