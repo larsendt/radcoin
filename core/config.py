@@ -19,3 +19,9 @@ class Config(object):
 
     def server_listen_port(self) -> int:
         return 8888
+
+    def gateway_address(self) -> str:
+        return "radcoin.larsendt.com"
+
+    def gateway_port(self) -> int:
+        return 8888

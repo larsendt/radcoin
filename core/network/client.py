@@ -42,11 +42,12 @@ class ChainClient(object):
         params = {"block_num": 0}
 
         while True:
-            resp_body = self._random_peer_get(path, params)
+            peer = self.peer_list.random_peer()
+            resp_body = self._peer_get(peer, path, params)
             if resp_body:
                 self.l.debug("resp body", resp_body)
             else:
-                self.l.warn("no response from peer")
+                self.l.warn("no response from peer", peer)
                 continue
 
             obj = json.loads(resp_body)
@@ -63,16 +64,6 @@ class ChainClient(object):
 
             return block
 
-    def request_peers(self) -> None:
-        path = "/peer"
-        for peer in self.peer_list.get_all_active_peers():
-            body = self._peer_get(peer, path, {})
-            self.l.debug("resp body", body)
-            obj = json.loads(body)
-            for new_peer in obj["peers"]:
-                p = Peer(new_peer["address"], new_peer["port"])
-                self.peer_list.add_peer(p)
-
     def tell_peers(self) -> None:
         all_peers = self.peer_list.get_all_active_peers()
         payload = {"peers": list(map(lambda p: p.serializable(), all_peers))}
@@ -82,14 +73,8 @@ class ChainClient(object):
     def poll_forever(self) -> None:
         while True:
             self.l.debug("Polling...")
-            self.request_peers()
-            self.tell_peers()
             self.tell_peers()
             time.sleep(30) # half of a block
-
-    def _random_peer_get(self, path: str, params: Dict[Any, Any]) -> Optional[bytes]:
-        peer = self.peer_list.random_peer()
-        return self._peer_get(peer, path, params)
 
     def _peer_get(
         self,

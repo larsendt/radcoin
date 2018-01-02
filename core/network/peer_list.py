@@ -36,13 +36,16 @@ MARK_PEER_INACTIVE_SQL = """
 UPDATE peers SET active=0 WHERE address=:address AND port=:port
 """
 
-GATEWAY_ADDRESS = "radcoin.larsendt.com"
-GATEWAY_PORT = 8888
-
 class Peer(object):
     def __init__(self, address: str, port: int) -> None:
         self.address = address
         self.port = port
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Peer):
+            return self.address == other.address and self.port == other.port
+        else:
+            return False
 
     def serializable(self):
         return {
@@ -64,7 +67,10 @@ class PeerList(object):
         self._conn.execute(CREATE_TABLE_SQL)
         self._conn.commit()
 
-        self.add_peer(Peer(GATEWAY_ADDRESS, GATEWAY_PORT))
+        self.gateway_peer = Peer(
+                cfg.gateway_address(),
+                cfg.gateway_port())
+        self.add_peer(self.gateway_peer)
 
     def add_peer(self, peer: Peer) -> None:
         if self.has_peer(peer):
@@ -85,7 +91,10 @@ class PeerList(object):
         return c.fetchone() is not None
 
     def mark_peer_inactive(self, peer: Peer) -> None:
-        if not self.has_peer(peer):
+        if peer == self.gateway_peer:
+            self.l.warn("Not marking gateway as inactive")
+            return
+        elif not self.has_peer(peer):
             self.l.debug("Not marking unknown peer {} inactive".format(peer))
             return
 
@@ -104,6 +113,9 @@ class PeerList(object):
 
     def random_peer(self) -> Peer:
         return random.choice(self.get_all_active_peers())
+
+    def peer_sample(self, n: int) -> List[Peer]:
+        return random.sample(self.get_all_active_peers(), n)
 
     def _update_peer(self, peer: Peer) -> None:
         args = {
