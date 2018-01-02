@@ -59,6 +59,11 @@ def main():
         required=True)
 
     parser.add_argument(
+        "--listen_port",
+        help="Listen on this port.",
+        default="8989")
+
+    parser.add_argument(
         "--no_advertize_self",
         help="If set, don't advertize ourselves as a peer.",
         action="store_false",
@@ -74,7 +79,11 @@ def main():
 
     print(args)
 
-    cfg = Config(args.log_level, args.listen_addr, args.no_advertize_self)
+    cfg = Config(
+        args.log_level,
+        args.listen_addr,
+        args.listen_port,
+        args.no_advertize_self)
 
     if args.mine_genesis:
         if args.bootstrap:

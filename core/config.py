@@ -3,9 +3,11 @@ class Config(object):
         self,
         log_level: str,
         listen_addr: str,
+        listen_port: int,
         advertize_self: bool) -> None:
         self._log_level = log_level
         self._listen_addr = listen_addr
+        self._listen_port = listen_port
         self._advertize_self = advertize_self
 
     def log_level(self) -> str:
@@ -24,13 +26,13 @@ class Config(object):
         return self._listen_addr
 
     def server_listen_port(self) -> int:
-        return 8888
+        return self._listen_port
 
     def gateway_address(self) -> str:
         return "radcoin.larsendt.com"
 
     def gateway_port(self) -> int:
-        return 8888
+        return 8989
 
     def advertize_self(self) -> bool:
         return self._advertize_self
