@@ -33,4 +33,4 @@ class Config(object):
         return 8888
 
     def advertize_self(self) -> bool:
-        return self.advertize_self
+        return self._advertize_self

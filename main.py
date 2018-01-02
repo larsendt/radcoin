@@ -64,6 +64,12 @@ def main():
         action="store_false",
         default=True)
 
+    parser.add_argument(
+        "--run_miner",
+        help="If set, run a miner.",
+        action="store_true",
+        default=False)
+
     args = parser.parse_args()
 
     print(args)
@@ -92,8 +98,9 @@ def main():
     print("Running client")
     ioloop.IOLoop.current().spawn_callback(start_client, cfg)
 
-    print("Running miner")
-    ioloop.IOLoop.current().spawn_callback(start_miner, cfg)
+    if args.run_miner:
+        print("Running miner")
+        ioloop.IOLoop.current().spawn_callback(start_miner, cfg)
 
     ioloop.IOLoop.current().start()
 
