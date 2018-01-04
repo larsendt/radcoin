@@ -70,10 +70,30 @@ class ChainClient(object):
             self.l.info("Telling peer {} about peers".format(peer))
             self._peer_post(peer, "/peer", payload)
 
+    def retransmit_blocks(self) -> None:
+        blocks_for_retransmit = self.chain.storage.get_retransmit_blocks()
+        if len(blocks_for_retransmit) == 0:
+            self.l.info("No blocks to retransmit")
+            return
+
+        self.l.info("{} blocks to retransmit".format(len(blocks_for_retransmit)))
+
+        for peer in self.peer_list.get_all_active_peers():
+            for block in blocks_for_retransmit:
+                self.l.debug("transmitting {} to peer {}".format(
+                    block.mining_hash(), peer))
+                payload = block.serializable()
+                self._peer_post(peer, "/block", payload)
+
+        for block in blocks_for_retransmit:
+            self.l.debug("Marking block {} as transmitted".format(block.mining_hash()))
+            self.chain.storage.mark_transmitted(block.mining_hash())
+
     def poll_forever(self) -> None:
         while True:
             self.l.debug("Polling...")
             self.tell_peers()
+            self.retransmit_blocks()
             time.sleep(30) # half of a block
 
     def _peer_get(

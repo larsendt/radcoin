@@ -6,7 +6,10 @@ class BlockChainStorage(object):
     def __init__(self):
         pass
 
-    def add_block(self, block: HashedBlock) -> None:
+    def add_block(self, block: HashedBlock, retransmit: bool = False) -> None:
+        raise NotImplementedError()
+
+    def mark_transmitted(self, mining_hash: Hash) -> None:
         raise NotImplementedError()
 
     def get_by_hash(self, block_hash: Hash) -> HashedBlock:
@@ -34,4 +37,7 @@ class BlockChainStorage(object):
         raise NotImplementedError()
 
     def get_all_non_genesis_in_order(self) -> List[HashedBlock]:
+        raise NotImplementedError()
+
+    def get_retransmit_blocks(self) -> List[HashedBlock]:
         raise NotImplementedError()

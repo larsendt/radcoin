@@ -14,9 +14,12 @@ class DefaultRequestHandler(web.RequestHandler):
     def get(self) -> None:
         d = {
             "available_rpcs": [
-                {"route": "/block", "params": ["hex_hash", "block_num"], "methods": ["get", "post"]},
+                {"route": "/block",
+                 "params": ["hex_hash", "parent_hex_hash", "block_num"],
+                 "methods": ["get", "post"]},
                 {"route": "/transaction", "methods": ["get", "post"]},
                 {"route": "/peer", "methods": ["get", "post"]},
+                {"route": "/chain", "methods": ["get"]},
             ]
         }
         self.write(d)
@@ -29,11 +32,14 @@ class BlockRequestHandler(web.RequestHandler):
     def get(self) -> None:
         requested_hash = self.get_query_argument("hex_hash", None)
         requested_block_num = self.get_query_argument("block_num", None)
+        parent_hash = self.get_query_argument("parent_hex_hash", None)
 
         if requested_hash is not None:
             self.get_by_hash(Hash.fromhex(requested_hash))
         elif requested_block_num is not None:
             self.get_by_block_num(int(requested_block_num))
+        elif parent_hash is not None:
+            self.get_by_parent_hash(Hash.fromhex(parent_hash))
         else:
             self.set_status(400)
             self.write(util.error_response(
@@ -54,7 +60,7 @@ class BlockRequestHandler(web.RequestHandler):
             return
 
         self.l.info("New block", hb.block_num(), hb.mining_hash())
-        self.chain.add_block(hb)
+        self.chain.add_block(hb, retransmit=True)
         self.set_status(200)
         self.write(util.generic_ok_response())
 
@@ -65,7 +71,7 @@ class BlockRequestHandler(web.RequestHandler):
             self.set_status(200)
             self.write(block.serializable())
         else:
-            self.set_status(400)
+            self.set_status(404)
             self.write(util.error_response("no block with given hash"))
 
     def get_by_block_num(self, block_num: int) -> None:
@@ -74,6 +80,13 @@ class BlockRequestHandler(web.RequestHandler):
         response = {"blocks": ser_blocks}
         self.set_status(200)
         self.write(response)
+
+    def get_by_parent_hash(self, parent_mining_hash: Hash):
+        blocks = self.chain.storage.get_by_parent_hash(parent_mining_hash)
+        self.set_status(200)
+        ser_blocks = list(map(lambda b: b.serializable(), blocks))
+        resp = {"blocks": ser_blocks}
+        self.write(resp)
 
 class TransactionRequestHandler(web.RequestHandler):
     def initialize(self, cfg: Config):

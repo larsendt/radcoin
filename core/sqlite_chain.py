@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS blocks (
     parent_hash BLOB,
     block_num INTEGER,
     is_head INTEGER,
+    retransmit INTEGER,
     serialized BLOB
 )"""
 
@@ -27,14 +28,20 @@ CREATE INDEX IF NOT EXISTS block_num_index ON blocks(block_num)"""
 CREATE_HEAD_INDEX_SQL = """
 CREATE INDEX IF NOT EXISTS head_index ON blocks(is_head)"""
 
+CREATE_RETRANSMIT_INDEX_SQL = """
+CREATE INDEX IF NOT EXISTS retransmit_index ON blocks(retransmit)"""
+
 ADD_BLOCK_SQL = """
 INSERT INTO blocks VALUES (
-    :hash, :parent_hash, :block_num, :is_head, :serialized
+    :hash, :parent_hash, :block_num, :is_head, :retransmit, :serialized
 )"""
+
+MARK_TRANSMITTED_SQL = "UPDATE blocks SET retransmit=0 WHERE hash = ?"
 
 GET_BY_HASH_SQL = "SELECT serialized FROM blocks WHERE hash = ?"
 GET_BY_PARENT_HASH_SQL = "SELECT serialized FROM blocks WHERE parent_hash = ?"
 GET_BY_NUM_SQL = "SELECT serialized FROM blocks WHERE block_num = ?"
+GET_RETRANSMIT_SQL = "SELECT serialized FROM blocks WHERE retransmit=1"
 
 GET_RANGE_SQL = """
 SELECT serialized
@@ -64,40 +71,44 @@ class SqliteBlockChainStorage(BlockChainStorage):
             cursor.execute(CREATE_HASH_INDEX_SQL)
             cursor.execute(CREATE_PARENT_HASH_INDEX_SQL)
             cursor.execute(CREATE_BLOCK_NUM_INDEX_SQL)
+            cursor.execute(CREATE_HEAD_INDEX_SQL)
+            cursor.execute(CREATE_RETRANSMIT_INDEX_SQL)
 
-    def busy_callback(self, calls: int) -> bool:
-        self.l.warn("Busy callback:", calls)
-        return True
+    def add_block(self, block: HashedBlock, retransmit: bool = False) -> None:
+        c = self._conn.cursor()
 
-    def add_block(self, block: HashedBlock) -> None:
-        with self._conn:
-            c = self._conn.cursor()
+        c.execute(GET_HEIGHT_SQL)
+        height = c.fetchone()[0]
 
-            c.execute(GET_HEIGHT_SQL)
-            height = c.fetchone()[0]
+        if height is None:
+            height = -1
 
-            if height is None:
-                height = -1
+        if block.block_num() > height:
+            is_head = True
+            c.execute(CLEAR_HEAD_SQL)
+        else:
+            is_head = False
 
-            if block.block_num() > height:
-                is_head = True
-                c.execute(CLEAR_HEAD_SQL)
-            else:
-                is_head = False
+        if block.parent_mining_hash() is None:
+            parent_hash = None
+        else:
+            parent_hash = block.parent_mining_hash().raw_sha256
 
-            if block.parent_mining_hash() is None:
-                parent_hash = None
-            else:
-                parent_hash = block.parent_mining_hash().raw_sha256
+        args = {
+            "hash": block.mining_hash().raw_sha256,
+            "parent_hash": parent_hash,
+            "block_num": block.block_num(),
+            "is_head": is_head,
+            "retransmit": 1 if retransmit else 0,
+            "serialized": block.serialize(),
+        }
+        c.execute(ADD_BLOCK_SQL, args)
+        self._conn.commit()
 
-            args = {
-                "hash": block.mining_hash().raw_sha256,
-                "parent_hash": parent_hash,
-                "block_num": block.block_num(),
-                "is_head": is_head,
-                "serialized": block.serialize(),
-            }
-            c.execute(ADD_BLOCK_SQL, args)
+    def mark_transmitted(self, mining_hash: Hash) -> None:
+        c = self._conn.cursor()
+        c.execute(MARK_TRANSMITTED_SQL, (mining_hash.raw_sha256,))
+        self._conn.commit()
 
     def get_head(self) -> HashedBlock:
         c = self._conn.cursor()
@@ -162,4 +173,9 @@ class SqliteBlockChainStorage(BlockChainStorage):
     def get_all_non_genesis_in_order(self) -> List[HashedBlock]:
         c = self._conn.cursor()
         c.execute(GET_ALL_NON_GENESIS_IN_ORDER_SQL)
+        return list(map(lambda r: HashedBlock.deserialize(r[0]), c))
+
+    def get_retransmit_blocks(self) -> List[HashedBlock]:
+        c = self._conn.cursor()
+        c.execute(GET_RETRANSMIT_SQL)
         return list(map(lambda r: HashedBlock.deserialize(r[0]), c))

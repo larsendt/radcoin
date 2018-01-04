@@ -74,10 +74,10 @@ class BlockChain(object):
     def get_head(self) -> HashedBlock:
         return self.storage.get_head()
 
-    def add_block(self, block: HashedBlock) -> None:
+    def add_block(self, block: HashedBlock, retransmit: bool = False) -> None:
         if self.block_is_valid(block):
             self.l.debug("Store block", block.block_num(), block.mining_hash().hex())
-            self.storage.add_block(block)
+            self.storage.add_block(block, retransmit)
         else:
             raise InvalidBlockError("Block is invalid")
 

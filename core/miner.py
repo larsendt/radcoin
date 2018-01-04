@@ -50,7 +50,7 @@ class BlockMiner(object):
             if new_block:
                 self.l.info("Found block {} {}".format(
                     new_block.block_num(), new_block.mining_hash().hex()))
-                self.chain.add_block(new_block)
+                self.chain.add_block(new_block, retransmit=True)
             else:
                 self.l.debug("Checking for new head")
 
