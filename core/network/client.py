@@ -62,6 +62,10 @@ class ChainClient(object):
         for peer in self.get_peers():
             payload = {"parent_hex_hash": parent_hash.hex()}
             resp = self._peer_get(peer, "/block", payload)
+            if resp is None:
+                self.l.info("No response from", peer)
+                continue
+
             obj = json.loads(resp)
             blocks = list(map(lambda b: HashedBlock.from_dict(b), obj["blocks"]))
             for block in blocks:
@@ -129,7 +133,8 @@ class ChainClient(object):
 
     def get_peers(self) -> List[Peer]:
         peers = self.peer_list.get_all_active_peers()
-        peers.remove(self.self_peer)
+        if self.self_peer in peers:
+            peers.remove(self.self_peer)
         return peers
 
     def _peer_get(
