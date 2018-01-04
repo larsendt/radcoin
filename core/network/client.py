@@ -16,6 +16,7 @@ class ChainClient(object):
         self.l = DBLogger(self, cfg)
         self.l.info("Init")
         self.peer_list = PeerList(cfg)
+        self.self_peer = Peer(cfg.server_listen_addr(), cfg.server_listen_port())
         self.cfg = cfg
 
     def bootstrap(self) -> None:
@@ -58,7 +59,7 @@ class ChainClient(object):
     def request_successors(self, parent_hash: Hash) -> List[HashedBlock]:
         new_blocks: Set[HashedBlock] = set()
 
-        for peer in self.peer_list.get_all_active_peers():
+        for peer in self.get_peers():
             payload = {"parent_hex_hash": parent_hash.hex()}
             resp = self._peer_get(peer, "/block", payload)
             obj = json.loads(resp)
@@ -95,7 +96,7 @@ class ChainClient(object):
             return block
 
     def request_peers(self) -> List[Peer]:
-        known_peers = self.peer_list.get_all_active_peers()
+        known_peers = self.get_peers()
         new_peers: Set[Peer] = set()
         for peer in known_peers:
             resp = self._peer_get(peer, "/peer", {}) 
@@ -112,7 +113,7 @@ class ChainClient(object):
         return list(new_peers)
 
     def transmit_peers(self, new_peers: List[Peer]) -> None:
-        all_peers = self.peer_list.get_all_active_peers()
+        all_peers = self.get_peers()
         payload = {"peers": list(map(lambda p: p.serializable(), new_peers))}
         for peer in all_peers:
             self.l.info("Telling peer {} about peers".format(peer))
@@ -120,11 +121,16 @@ class ChainClient(object):
 
     def transmit_block(self, block: HashedBlock) -> None:
         self.l.info("Transmitting block {}".format(block.mining_hash()))
-        for peer in self.peer_list.get_all_active_peers():
+        for peer in self.get_peers():
             self.l.debug("transmitting {} to peer {}".format(
                 block.mining_hash(), peer))
             payload = block.serializable()
             self._peer_post(peer, "/block", payload)
+
+    def get_peers(self) -> List[Peer]:
+        peers = self.peer_list.get_all_active_peers()
+        peers.remove(self.self_peer)
+        return peers
 
     def _peer_get(
         self,
