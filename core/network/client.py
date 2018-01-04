@@ -3,39 +3,70 @@ from core.chain import BlockChain
 from core.config import Config
 from core.dblog import DBLogger
 from core.network.peer_list import Peer, PeerList
+from core.serializable import Hash
 from core.sqlite_chain import SqliteBlockChainStorage
 from core.transaction.signed_transaction import SignedTransaction
 import json
 import requests
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Set
 
 class ChainClient(object):
     def __init__(self, cfg: Config) -> None:
         self.l = DBLogger(self, cfg)
         self.l.info("Init")
         self.peer_list = PeerList(cfg)
-        self.storage = SqliteBlockChainStorage(cfg)
-        self.chain: Optional[BlockChain] = None
         self.cfg = cfg
 
-        if self.storage.get_genesis():
-            self.chain = BlockChain.load(self.storage, cfg)
-        else:
-            self.l.warn("Storage has no genesis, either bootstrap via the client or mine a genesis block")
+    def bootstrap(self) -> None:
+        for peer in self.request_peers():
+            if self.peer_list.has_peer(peer):
+                self.l.info("Already have peer {}", peer)
+                continue
+            else:
+                self.l.info("New peer {}", peer)
+                self.peer_list.add_peer(peer)
+
+        storage = SqliteBlockChainStorage(self.cfg)
+        if not storage.get_genesis():
+            self.l.info("Getting genesis block")
+            genesis = self.request_genesis()
+            storage.add_block(genesis)
+
+        self.l.info("Init block chain")
+        chain = BlockChain.load(storage, self.cfg)
+
+        block = chain.get_head()
+        self.l.info("Height is currently", block.block_num())
+
+        while True:
+            successors = self.request_successors(block.mining_hash())
+
+            if len(successors) == 0:
+                self.l.info("No more successors")
+                break
+            else:
+                for block in successors:
+                    self.l.info("New block {}", block.mining_hash())
+                    chain.add_block(block)
+
+        self.l.info("Finished bootstrapping")
 
     def add_local_peer(self, peer: Peer) -> None:
         self.peer_list.add_peer(peer)
 
-    def bootstrap(self) -> None:
-        if self.storage.get_genesis():
-            self.l.info("Already have genesis, no bootstrap needed")
-            self.chain = BlockChain.load(self.storage, self.cfg)
-        else:
-            self.l.info("Requesting genesis block")
-            genesis = self.request_genesis()
-            self.chain = BlockChain.new(self.storage, genesis, self.cfg)
-            self.l.info("Got genesis block")
+    def request_successors(self, parent_hash: Hash) -> List[HashedBlock]:
+        new_blocks: Set[HashedBlock] = set()
+
+        for peer in self.peer_list.get_all_active_peers():
+            payload = {"parent_hex_hash": parent_hash.hex()}
+            resp = self._peer_get(peer, "/block", payload)
+            obj = json.loads(resp)
+            blocks = list(map(lambda b: HashedBlock.from_dict(b), obj["blocks"]))
+            for block in blocks:
+                new_blocks.add(block)
+
+        return list(new_blocks)
 
     def request_genesis(self) -> HashedBlock:
         path = "/block"
@@ -63,38 +94,37 @@ class ChainClient(object):
 
             return block
 
-    def tell_peers(self) -> None:
+    def request_peers(self) -> List[Peer]:
+        known_peers = self.peer_list.get_all_active_peers()
+        new_peers: Set[Peer] = set()
+        for peer in known_peers:
+            resp = self._peer_get(peer, "/peer", {}) 
+            if resp:
+                self.l.debug("Got peers from", peer)
+                obj = json.loads(resp)
+                ser_peers = obj["peers"]
+                
+                for ser in ser_peers:
+                    new_peer = Peer(ser["address"], ser["port"])
+                    new_peers.add(new_peer)
+
+        self.l.info("Got {} new peers".format(len(new_peers)))
+        return list(new_peers)
+
+    def transmit_peers(self, new_peers: List[Peer]) -> None:
         all_peers = self.peer_list.get_all_active_peers()
-        payload = {"peers": list(map(lambda p: p.serializable(), all_peers))}
+        payload = {"peers": list(map(lambda p: p.serializable(), new_peers))}
         for peer in all_peers:
             self.l.info("Telling peer {} about peers".format(peer))
             self._peer_post(peer, "/peer", payload)
 
-    def retransmit_blocks(self) -> None:
-        blocks_for_retransmit = self.chain.storage.get_retransmit_blocks()
-        if len(blocks_for_retransmit) == 0:
-            self.l.info("No blocks to retransmit")
-            return
-
-        self.l.info("{} blocks to retransmit".format(len(blocks_for_retransmit)))
-
+    def transmit_block(self, block: HashedBlock) -> None:
+        self.l.info("Transmitting block {}".format(block.mining_hash()))
         for peer in self.peer_list.get_all_active_peers():
-            for block in blocks_for_retransmit:
-                self.l.debug("transmitting {} to peer {}".format(
-                    block.mining_hash(), peer))
-                payload = block.serializable()
-                self._peer_post(peer, "/block", payload)
-
-        for block in blocks_for_retransmit:
-            self.l.debug("Marking block {} as transmitted".format(block.mining_hash()))
-            self.chain.storage.mark_transmitted(block.mining_hash())
-
-    def poll_forever(self) -> None:
-        while True:
-            self.l.debug("Polling...")
-            self.tell_peers()
-            self.retransmit_blocks()
-            time.sleep(30) # half of a block
+            self.l.debug("transmitting {} to peer {}".format(
+                block.mining_hash(), peer))
+            payload = block.serializable()
+            self._peer_post(peer, "/block", payload)
 
     def _peer_get(
         self,

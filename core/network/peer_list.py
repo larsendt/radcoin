@@ -47,6 +47,9 @@ class Peer(object):
         else:
             return False
 
+    def __hash__(self) -> int:
+        return hash(self.address + "_" + str(self.port))
+
     def serializable(self):
         return {
             "address": self.address,

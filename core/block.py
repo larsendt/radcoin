@@ -73,6 +73,15 @@ class HashedBlock(Serializable):
         return "HashedBlock<num={},hash={}>".format(
             self.block_num(), self.mining_hash())
 
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, HashedBlock):
+            return self.mining_hash() == other.mining_hash()
+        else:
+            return False
+
+    def __hash__(self) -> int:
+        return hash(self.mining_hash())
+
     def replace_mining_entropy(self, new_entropy: bytes) -> None:
         self.mining_entropy = new_entropy
         self.mining_timestamp = Timestamp.now()

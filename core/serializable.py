@@ -39,7 +39,7 @@ class Hash(Serializable):
         return self.raw_sha256.hex()
 
     def __str__(self) -> str:
-        return "Hash<hex_sha256={}>".format(self.raw_sha256)
+        return "Hash<hex_sha256={}>".format(self.hex())
 
     def serializable(self) -> Ser:
         return {

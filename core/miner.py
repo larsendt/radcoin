@@ -6,6 +6,7 @@ from core.config import Config
 from core.dblog import DBLogger
 from core.difficulty import DEFAULT_DIFFICULTY
 from core.key_pair import KeyPair
+from core.network.client import ChainClient
 from core.sqlite_chain import SqliteBlockChainStorage
 from core.timestamp import Timestamp
 from core.transaction.transaction import Transaction
@@ -18,6 +19,8 @@ class BlockMiner(object):
     def __init__(self, cfg: Config, key_pair: Optional[KeyPair] = None) -> None:
         self.l = DBLogger(self, cfg)
         self.cfg = cfg
+
+        self.client = ChainClient(cfg)
 
         if key_pair is None:
             self.key_pair = KeyPair()
@@ -50,7 +53,9 @@ class BlockMiner(object):
             if new_block:
                 self.l.info("Found block {} {}".format(
                     new_block.block_num(), new_block.mining_hash().hex()))
-                self.chain.add_block(new_block, retransmit=True)
+                self.chain.add_block(new_block)
+                self.l.info("Transmitting new block")
+                self.client.transmit_block(new_block)
             else:
                 self.l.debug("Checking for new head")
 

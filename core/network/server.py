@@ -3,12 +3,14 @@ from core.chain import BlockChain
 from core.config import Config
 from core.dblog import DBLogger
 from core.network import util
+from core.network.client import ChainClient
 from core.network.peer_list import Peer, PeerList
 from core.serializable import Hash
 from core.sqlite_chain import SqliteBlockChainStorage
 from core.transaction.signed_transaction import SignedTransaction
 import json
 from tornado import web
+from typing import List
 
 class DefaultRequestHandler(web.RequestHandler):
     def get(self) -> None:
@@ -25,8 +27,14 @@ class DefaultRequestHandler(web.RequestHandler):
         self.write(d)
 
 class BlockRequestHandler(web.RequestHandler):
-    def initialize(self, chain: BlockChain, cfg: Config) -> None:
+    def initialize(
+        self,
+        chain: BlockChain,
+        client: ChainClient,
+        cfg: Config) -> None:
+
         self.chain = chain
+        self.client = client
         self.l = DBLogger(self, cfg)
 
     def get(self) -> None:
@@ -60,7 +68,8 @@ class BlockRequestHandler(web.RequestHandler):
             return
 
         self.l.info("New block", hb.block_num(), hb.mining_hash())
-        self.chain.add_block(hb, retransmit=True)
+        self.chain.add_block(hb)
+        self.client.transmit_block(hb)
         self.set_status(200)
         self.write(util.generic_ok_response())
 
@@ -99,9 +108,10 @@ class TransactionRequestHandler(web.RequestHandler):
         self.write(util.error_response("unimplemented"))
 
 class PeerRequestHandler(web.RequestHandler):
-    def initialize(self, peer_list: PeerList, cfg: Config):
+    def initialize(self, peer_list: PeerList, client: ChainClient, cfg: Config):
         self.l = DBLogger(self, cfg)
         self.peer_list = peer_list
+        self.client = client
 
     def get(self) -> None:
         peers = list(map(lambda p: p.serializable(),
@@ -113,10 +123,20 @@ class PeerRequestHandler(web.RequestHandler):
     def post(self) -> None:
         peers = json.loads(self.request.body.decode('utf-8'))
 
-        for peer in peers["peers"]:
-            p = Peer(peer["address"], peer["port"])
-            self.l.info("New peer", p)
-            self.peer_list.add_peer(p)
+        maybe_new_peers = list(map(lambda p: Peer(p["address"], p["port"]), peers))
+        new_peers: List[Peer] = []
+
+        for peer in maybe_new_peers:
+            if self.peer_list.has_peer(peer):
+                self.l.info("Already have peer", peer)
+                continue
+
+            new_peers.append(peer)
+            self.l.info("New peer", peer)
+            self.peer_list.add_peer(peer)
+
+        self.l.info("Transmitting new peers")
+        self.client.transmit_peers(new_peers)
 
         self.set_status(200)
         self.write(util.generic_ok_response())
@@ -149,12 +169,13 @@ class ChainServer(object):
 
         self.l.info("Loading existing chain")
         self.chain = BlockChain.load(self.storage, cfg)
+        self.client = ChainClient(cfg)
 
         self.app = web.Application([
             web.url(r"/", DefaultRequestHandler),
-            web.url(r"/block", BlockRequestHandler, {"chain": self.chain, "cfg": cfg}),
+            web.url(r"/block", BlockRequestHandler, {"chain": self.chain, "cfg": cfg, "client": self.client}),
             web.url(r"/transaction", TransactionRequestHandler, {"cfg": cfg}),
-            web.url(r"/peer", PeerRequestHandler, {"peer_list": self.peer_list, "cfg": cfg}),
+            web.url(r"/peer", PeerRequestHandler, {"peer_list": self.peer_list, "cfg": cfg, "client": self.client}),
             web.url(r"/chain", ChainRequestHandler, {"cfg": cfg, "chain": self.chain}),
         ])
 
