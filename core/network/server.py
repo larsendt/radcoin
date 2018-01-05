@@ -123,7 +123,7 @@ class PeerRequestHandler(web.RequestHandler):
     def post(self) -> None:
         peers = json.loads(self.request.body.decode('utf-8'))
 
-        maybe_new_peers = list(map(lambda p: Peer(p["address"], p["port"]), peers))
+        maybe_new_peers = list(map(lambda p: Peer(p["address"], p["port"]), peers["peers"]))
         new_peers: List[Peer] = []
 
         for peer in maybe_new_peers:
