@@ -152,6 +152,8 @@ class ChainRequestHandler(web.RequestHandler):
             "height": h.block_num(),
             "head_hex_hash": h.mining_hash().hex(),
         }
+        self.set_status(200)
+        self.write(resp)
 
 class ChainServer(object):
     def __init__(self, cfg: Config) -> None:
