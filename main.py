@@ -88,8 +88,8 @@ def main():
         advert_addr,
         args.listen_port,
         args.no_advertize_self,
-        args.miner_procs,
-        args.miner_throttle)
+        int(args.miner_procs),
+        float(args.miner_throttle))
 
     if args.mine_genesis:
         print("Mining genesis")
