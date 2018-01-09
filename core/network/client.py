@@ -16,7 +16,7 @@ class ChainClient(object):
         self.l = DBLogger(self, cfg)
         self.l.info("Init")
         self.peer_list = PeerList(cfg)
-        self.self_peer = Peer(cfg.server_listen_addr(), cfg.server_listen_port())
+        self.self_peer = Peer(cfg.server_advertize_addr(), cfg.server_listen_port())
         self.cfg = cfg
 
     def bootstrap(self) -> None:
@@ -27,6 +27,12 @@ class ChainClient(object):
             else:
                 self.l.info("New peer {}", peer)
                 self.peer_list.add_peer(peer)
+
+        if self.cfg.advertize_self():
+            self.l.info("Telling peers about self")
+            self.transmit_peers([self.self_peer])
+        else:
+            self.l.info("Not telling peers about self")
 
         storage = SqliteBlockChainStorage(self.cfg)
         if not storage.get_genesis():
@@ -119,6 +125,7 @@ class ChainClient(object):
     def transmit_peers(self, new_peers: List[Peer]) -> None:
         all_peers = self.get_peers()
         payload = {"peers": list(map(lambda p: p.serializable(), new_peers))}
+        print(payload)
         for peer in all_peers:
             self.l.info("Telling peer {} about peers".format(peer))
             self._peer_post(peer, "/peer", payload)
@@ -143,7 +150,7 @@ class ChainClient(object):
         path: str,
         params: Dict[Any, Any]) -> Optional[bytes]:
 
-        url = "http://" + peer.address + ":" + str(peer.port) + path
+        url = peer.http_url(path)
         self.l.debug("get", url, params)
 
         try:
@@ -160,7 +167,7 @@ class ChainClient(object):
             peer: Peer,
             path: str,
             payload: Any) -> None:
-        url = "http://" + peer.address + ":" + str(peer.port) + path
+        url = peer.http_url(path)
         self.l.debug("post", url, payload)
 
         try:

@@ -5,6 +5,7 @@ from core.key_pair import KeyPair
 from core.network.client import ChainClient
 from core.network.peer_list import Peer
 from core.network.server import ChainServer
+from core.network import util
 from concurrent.futures import ProcessPoolExecutor, wait
 from tornado import ioloop, gen
 import os
@@ -39,9 +40,10 @@ def main():
     )
 
     parser.add_argument(
-        "--listen_addr",
-        help="Have the server listen on this addr and advertize it to the network.",
-        required=True)
+        "--advertize_addr",
+        help="Have the server advertize this address to the network.",
+        default=None
+    )
 
     parser.add_argument(
         "--listen_port",
@@ -64,9 +66,16 @@ def main():
 
     print(args)
 
+    if args.advertize_addr:
+        advert_addr = args.advertize_addr
+    else:
+        advert_addr = util.resolve_external_address()
+
+    print("Will advertize {} as our peer address".format(advert_addr))
+
     cfg = Config(
         args.log_level,
-        args.listen_addr,
+        advert_addr,
         args.listen_port,
         args.no_advertize_self)
 

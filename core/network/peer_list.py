@@ -41,6 +41,20 @@ class Peer(object):
         self.address = address
         self.port = port
 
+    def is_ipv6(self):
+        return ":" in self.address # HAX
+
+    def http_url(self, path):
+        if self.is_ipv6():
+            ip = "[" + self.address + "]"
+        else:
+            ip = self.address
+
+        if not path.startswith("/"):
+            path = "/" + path
+ 
+        return "http://" + ip + ":" + str(self.port) + path
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Peer):
             return self.address == other.address and self.port == other.port
@@ -57,7 +71,12 @@ class Peer(object):
         }
 
     def __str__(self):
-        return "Peer<{}:{}>".format(self.address, self.port)
+        if self.is_ipv6():
+            ip = "[" + self.address + "]"
+        else:
+            ip = self.address
+
+        return "Peer<{}:{}>".format(ip, self.port)
 
     def __repr__(self):
         return self.__str__()
@@ -74,7 +93,7 @@ class PeerList(object):
                 cfg.gateway_address(),
                 cfg.gateway_port())
         self.self_peer = Peer(
-                cfg.server_listen_addr(),
+                cfg.server_advertize_addr(),
                 cfg.server_listen_port())
         self.add_peer(self.gateway_peer)
 

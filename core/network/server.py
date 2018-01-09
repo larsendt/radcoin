@@ -161,7 +161,7 @@ class ChainServer(object):
         self.peer_list = PeerList(cfg)
         self.storage = SqliteBlockChainStorage(cfg)
         self.peer_info = Peer(
-                cfg.server_listen_addr(),
+                cfg.server_advertize_addr(),
                 cfg.server_listen_port())
         self.advertize_self = cfg.advertize_self()
 
@@ -188,4 +188,4 @@ class ChainServer(object):
         else:
             self.l.info("Not advertizing self as peer")
 
-        self.app.listen(self.peer_info.port, address=self.peer_info.address)
+        self.app.listen(self.peer_info.port, address="0.0.0.0")

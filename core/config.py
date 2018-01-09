@@ -2,11 +2,11 @@ class Config(object):
     def __init__(
         self,
         log_level: str,
-        listen_addr: str,
+        advertize_addr: str,
         listen_port: int,
         advertize_self: bool) -> None:
         self._log_level = log_level
-        self._listen_addr = listen_addr
+        self._advertize_addr = advertize_addr
         self._listen_port = listen_port
         self._advertize_self = advertize_self
 
@@ -22,8 +22,8 @@ class Config(object):
     def peer_db_path(self) -> str:
         return "peers.sqlite"
 
-    def server_listen_addr(self) -> str:
-        return self._listen_addr
+    def server_advertize_addr(self) -> str:
+        return self._advertize_addr
 
     def server_listen_port(self) -> int:
         return self._listen_port
