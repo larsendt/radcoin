@@ -116,14 +116,17 @@ class PeerRequestHandler(web.RequestHandler):
     def get(self) -> None:
         peers = list(map(lambda p: p.serializable(),
                 self.peer_list.get_all_active_peers()))
-        resp = {"peers": peers}
+        resp = {
+            "peers": peers,
+            "peer_id": self.cfg.server_peer_id(),
+        }
         self.set_status(200)
         self.write(resp)
 
     def post(self) -> None:
         peers = json.loads(self.request.body.decode('utf-8'))
 
-        maybe_new_peers = list(map(lambda p: Peer(p["address"], p["port"]), peers["peers"]))
+        maybe_new_peers = list(map(lambda p: Peer(p["peer_id"], p["address"], p["port"]), peers["peers"]))
         new_peers: List[Peer] = []
 
         for peer in maybe_new_peers:
@@ -161,6 +164,7 @@ class ChainServer(object):
         self.peer_list = PeerList(cfg)
         self.storage = SqliteBlockChainStorage(cfg)
         self.peer_info = Peer(
+                cfg.server_peer_id(),
                 cfg.server_advertize_addr(),
                 cfg.server_listen_port())
         self.advertize_self = cfg.advertize_self()

@@ -1,5 +1,5 @@
 import argparse
-from core.config import Config
+from core.config import Config, ConfigBuilder
 from core.miner import BlockMiner
 from core.key_pair import KeyPair
 from core.network.client import ChainClient
@@ -34,62 +34,18 @@ def main():
         action="store_true")
 
     parser.add_argument(
-        "--log_level",
-        default="INFO",
-        choices=["DEBUG", "INFO", "WARN", "ERROR"],
-    )
+        "--cfg_path",
+        help="Path to the config file. If it doesn't exist, it will be created.",
+        required=True)
 
     parser.add_argument(
         "--advertize_addr",
-        help="Have the server advertize this address to the network.",
-        default=None
-    )
-
-    parser.add_argument(
-        "--listen_port",
-        help="Listen on this port.",
-        default="8989")
-
-    parser.add_argument(
-        "--no_advertize_self",
-        help="If set, don't advertize ourselves as a peer.",
-        action="store_false",
-        default=True)
-
-    parser.add_argument(
-        "--run_miner",
-        help="If set, run a miner.",
-        action="store_true",
-        default=False)
-
-    parser.add_argument(
-        "--miner_procs",
-        help="Number miner of processes to run.",
-        default=1)
-
-    parser.add_argument(
-        "--miner_throttle",
-        help="Between 0 and 1. Fraction of the time that the miner should run.",
-        default=1.0)
+        help="The address to advertize to the network.",
+        default=None)
 
     args = parser.parse_args()
 
-    print(args)
-
-    if args.advertize_addr:
-        advert_addr = args.advertize_addr
-    else:
-        advert_addr = util.resolve_external_address()
-
-    print("Will advertize {} as our peer address".format(advert_addr))
-
-    cfg = Config(
-        args.log_level,
-        advert_addr,
-        args.listen_port,
-        args.no_advertize_self,
-        int(args.miner_procs),
-        float(args.miner_throttle))
+    cfg: Config = ConfigBuilder(args.cfg_path, args.advertize_addr).build()
 
     if args.mine_genesis:
         print("Mining genesis")

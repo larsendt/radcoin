@@ -1,13 +1,16 @@
 from core.config import Config
 from core.dblog import DBLogger
+from core.network import util
 import random
 import sqlite3
 import time
+import requests
 from typing import List
 
 CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS peers (
     id INTEGER NOT NULL PRIMARY KEY,
+    peer_id TEXT NOT NULL,
     address TEXT NOT NULL,
     port INTEGER NOT NULL,
     last_seen_unix_millis INTEGER NOT NULL,
@@ -15,31 +18,34 @@ CREATE TABLE IF NOT EXISTS peers (
 )
 """
 
-CREATE_IP_PORT_INDEX = """
-CREATE UNIQUE INDEX IF NOT EXISTS ip_port_index ON peers(address, port)
+CREATE_PEER_ID_INDEX = """
+CREATE UNIQUE INDEX IF NOT EXISTS peer_id_index ON peers(peer_id)
 """
 
-HAS_PEER_SQL = "SELECT id FROM peers WHERE address=:address AND port=:port"
-GET_ALL_ACTIVE_PEERS_SQL = "SELECT address, port FROM peers WHERE active=1"
+HAS_PEER_SQL = "SELECT id FROM peers WHERE peer_id=?"
+GET_ALL_ACTIVE_PEERS_SQL = "SELECT peer_id, address, port FROM peers WHERE active=1"
 
 UPDATE_PEER_SQL = """
-UPDATE peers SET active=:active, last_seen_unix_millis=:last_seen_unix_millis
-WHERE address=:address AND port=:port
+UPDATE peers
+SET active=:active, last_seen_unix_millis=:last_seen_unix_millis, address=:address, port=:port
+WHERE peer_id=:peer_id
 """
 
 INSERT_PEER_SQL = """
-INSERT INTO peers(address, port, last_seen_unix_millis, active)
-VALUES (:address, :port, :last_seen_unix_millis, :active)
+INSERT INTO peers(peer_id, address, port, last_seen_unix_millis, active)
+VALUES (:peer_id, :address, :port, :last_seen_unix_millis, :active)
 """
 
-MARK_PEER_INACTIVE_SQL = """
-UPDATE peers SET active=0 WHERE address=:address AND port=:port
-"""
+MARK_PEER_INACTIVE_SQL = "UPDATE peers SET active=0 WHERE peer_id=?"
 
 class Peer(object):
-    def __init__(self, address: str, port: int) -> None:
+    def __init__(self, peer_id: str, address: str, port: int) -> None:
+        if len(peer_id) != util.PEER_ID_SIZE_BITS // 4:
+            raise ValueError("Peer id must be 256 bits", peer_id)
+
+        self.peer_id = peer_id
         self.address = address
-        self.port = port
+        self.port = int(port)
 
     def is_ipv6(self):
         return ":" in self.address # HAX
@@ -55,28 +61,32 @@ class Peer(object):
  
         return "http://" + ip + ":" + str(self.port) + path
 
+    @staticmethod
+    def request_id(address: str, port: int) -> 'Peer':
+        tmp = Peer(util.generate_peer_id(), address, port)
+        r = requests.get(tmp.http_url("/peer"))
+        obj = r.json()
+        peer_id = obj["peer_id"]
+        return Peer(peer_id, address, port)
+
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Peer):
-            return self.address == other.address and self.port == other.port
+            return self.peer_id == other.peer_id
         else:
             return False
 
     def __hash__(self) -> int:
-        return hash(self.address + "_" + str(self.port))
+        return hash(self.peer_id)
 
     def serializable(self):
         return {
+            "peer_id": self.peer_id,
             "address": self.address,
             "port": self.port,
         }
 
     def __str__(self):
-        if self.is_ipv6():
-            ip = "[" + self.address + "]"
-        else:
-            ip = self.address
-
-        return "Peer<{}:{}>".format(ip, self.port)
+        return "Peer<{}>".format(self.peer_id)
 
     def __repr__(self):
         return self.__str__()
@@ -89,12 +99,15 @@ class PeerList(object):
         self._conn.execute(CREATE_TABLE_SQL)
         self._conn.commit()
 
-        self.gateway_peer = Peer(
-                cfg.gateway_address(),
-                cfg.gateway_port())
+        self.gateway_peer = Peer.request_id(
+            cfg.gateway_address(),
+            cfg.gateway_port())
+
         self.self_peer = Peer(
-                cfg.server_advertize_addr(),
-                cfg.server_listen_port())
+            cfg.server_peer_id(),
+            cfg.server_advertize_addr(),
+            cfg.server_listen_port())
+
         self.add_peer(self.gateway_peer)
 
     def add_peer(self, peer: Peer) -> None:

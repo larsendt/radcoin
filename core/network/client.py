@@ -16,7 +16,10 @@ class ChainClient(object):
         self.l = DBLogger(self, cfg)
         self.l.info("Init")
         self.peer_list = PeerList(cfg)
-        self.self_peer = Peer(cfg.server_advertize_addr(), cfg.server_listen_port())
+        self.self_peer = Peer(
+                cfg.server_peer_id(),
+                cfg.server_advertize_addr(),
+                cfg.server_listen_port())
         self.cfg = cfg
 
     def bootstrap(self) -> None:
@@ -116,7 +119,7 @@ class ChainClient(object):
                 ser_peers = obj["peers"]
                 
                 for ser in ser_peers:
-                    new_peer = Peer(ser["address"], ser["port"])
+                    new_peer = Peer(ser["peer_id"], ser["address"], ser["port"])
                     new_peers.add(new_peer)
 
         self.l.info("Got {} new peers".format(len(new_peers)))
