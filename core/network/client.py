@@ -140,7 +140,7 @@ class ChainClient(object):
 
     def get_peers(self) -> List[Peer]:
         peers = self.peer_list.get_all_active_peers()
-        peers = list(filter(lambda p: p == self.self_peer, peers))
+        peers = list(filter(lambda p: p != self.self_peer, peers))
         self.l.debug("Peers", peers)
         return peers
 

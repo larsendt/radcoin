@@ -38,7 +38,7 @@ class Config(object):
         return self._listen_port
 
     def gateway_address(self) -> str:
-        return "radcoin.larsendt.com"
+        return "localhost"
 
     def gateway_port(self) -> int:
         return 8989
