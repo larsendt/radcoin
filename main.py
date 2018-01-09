@@ -21,9 +21,9 @@ def mine(key_pair: KeyPair, cfg: Config) -> None:
 
 @gen.coroutine
 def start_miner(cfg: Config):
-    pool = ProcessPoolExecutor(max_workers=1)
+    pool = ProcessPoolExecutor(max_workers=cfg.miner_procs())
     kp = KeyPair()
-    yield pool.submit(mine, kp, cfg)
+    yield [pool.submit(mine, kp, cfg) for i in range(cfg.miner_procs())]
 
 def main():
     parser = argparse.ArgumentParser("Radcoin does stuff")
@@ -62,6 +62,16 @@ def main():
         action="store_true",
         default=False)
 
+    parser.add_argument(
+        "--miner_procs",
+        help="Number miner of processes to run.",
+        default=1)
+
+    parser.add_argument(
+        "--miner_throttle",
+        help="Between 0 and 1. Fraction of the time that the miner should run.",
+        default=1.0)
+
     args = parser.parse_args()
 
     print(args)
@@ -77,7 +87,9 @@ def main():
         args.log_level,
         advert_addr,
         args.listen_port,
-        args.no_advertize_self)
+        args.no_advertize_self,
+        args.miner_procs,
+        args.miner_throttle)
 
     if args.mine_genesis:
         print("Mining genesis")
