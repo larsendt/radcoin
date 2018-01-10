@@ -2,6 +2,7 @@ import json
 import os
 from typing import Any, Dict, Optional
 from core.network import util
+from core.peer import generate_peer_id
 
 DEFAULTS = {
     "chain_db_path": "./chain.sqlite",
@@ -9,11 +10,13 @@ DEFAULTS = {
     "peer_db_path": "./peers.sqlite",
     "gateway_address": "radcoin.larsendt.com",
     "gateway_port": 8989,
-    "miner_procs": 1,
-    "miner_throttle": 1.0,
-    "advertize_self": True,
+    "miner_procs": 1, # number of processes to run
+    "miner_throttle": 1.0, # attempt to use no more than this fraction of each CPU
+    "advertize_self": True, # set this to false if you can't run a server
     "listen_port": 8989,
-    "log_level": "INFO",
+    "log_level": "INFO", # see core.dblog
+    "peer_sample_size": 10, # when choosing a random set of peers, use this many
+    "poll_delay": 5 # seconds
 }
 
 class Config(object):
@@ -30,6 +33,8 @@ class Config(object):
         self._peer_db_path = args["peer_db_path"]
         self._gateway_address = args["gateway_address"]
         self._gateway_port = int(args["gateway_port"])
+        self._peer_sample_size = int(args["peer_sample_size"])
+        self._poll_delay = int(args["poll_delay"])
 
         if 0 < args["miner_throttle"] <= 1:
             self._miner_throttle = args["miner_throttle"]
@@ -72,17 +77,19 @@ class Config(object):
     def miner_throttle(self) -> float:
         return self._miner_throttle
 
+    def peer_sample_size(self) -> int:
+        return self._peer_sample_size
+
+    def poll_delay(self) -> int:
+        return self._poll_delay
+
 class ConfigBuilder(object):
     def __init__(self,
         cfg_path,
-        advertize_addr: Optional[str] = None) -> None:
+        advertize_addr: Optional[str] = None,
+        log_level: Optional[str] = None) -> None:
 
         self.cfg = DEFAULTS
-
-        if advertize_addr:
-            self.cfg["advertize_addr"] = advertize_addr
-        else:
-            self.cfg["advertize_addr"] = util.resolve_external_address()
 
         if os.path.exists(cfg_path):
             with open(cfg_path, "r") as f:
@@ -90,7 +97,15 @@ class ConfigBuilder(object):
                     self.cfg[key] = value
 
         if "peer_id" not in self.cfg:
-            self.cfg["peer_id"] = util.generate_peer_id()
+            self.cfg["peer_id"] = generate_peer_id()
+
+        if advertize_addr:
+            self.cfg["advertize_addr"] = advertize_addr
+        else:
+            self.cfg["advertize_addr"] = util.resolve_external_address()
+
+        if log_level is not None:
+            self.cfg["log_level"] = log_level
 
         print("Saving config")
         with open(cfg_path, "w") as f:

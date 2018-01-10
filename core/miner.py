@@ -18,6 +18,7 @@ from typing import Optional
 class BlockMiner(object):
     def __init__(self, cfg: Config, key_pair: Optional[KeyPair] = None) -> None:
         self.l = DBLogger(self, cfg)
+        self.l.info("Init")
         self.cfg = cfg
 
         self.client = ChainClient(cfg)
@@ -28,23 +29,10 @@ class BlockMiner(object):
             self.key_pair = key_pair
 
         self.storage = SqliteBlockChainStorage(cfg)
-        self.chain: Optional[BlockChain] = None
-
-        if self.storage.get_genesis() is None:
-            self.l.error("Storage has no genesis, either bootstrap with the client or mine a genesis block")
-        else:
-            self.l.info("Loading existing chain")
-            self.chain = BlockChain.load(self.storage, cfg)
-
-    def mine_genesis(self) -> None:
-        if self.storage.get_genesis() is None:
-            self.l.info("Making a new chain")
-            genesis = self.make_genesis()
-            self.chain = BlockChain.new(self.storage, genesis, self.cfg)
-        else:
-            self.l.info("Storage already has genesis, no need to mine it")
+        self.chain = BlockChain(self.storage, cfg)
 
     def mine_forever(self) -> None:
+        self.l.info("Miner running")
         while True:
             head = self.chain.get_head()
             self.l.debug("Mining on block {}".format(head.block_num()))
@@ -54,10 +42,8 @@ class BlockMiner(object):
                 self.l.info("Found block {} {}".format(
                     new_block.block_num(), new_block.mining_hash().hex()))
                 self.chain.add_block(new_block)
-                self.l.info("Transmitting new block")
-                self.client.transmit_block(new_block)
-            else:
-                self.l.debug("Checking for new head")
+            elif head != self.chain.get_head():
+                self.l.info("Preempted! Mining on new block", head)
 
     def mine_on(self, parent: HashedBlock, difficulty: int) -> Optional[HashedBlock]:
         reward = self.make_reward()

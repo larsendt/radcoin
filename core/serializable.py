@@ -41,6 +41,12 @@ class Hash(Serializable):
     def __str__(self) -> str:
         return "Hash<hex_sha256={}>".format(self.hex())
 
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Hash):
+            return self.raw_sha256 == other.raw_sha256
+        else:
+            return False
+
     def serializable(self) -> Ser:
         return {
             "sha256_hex": self.hex(),

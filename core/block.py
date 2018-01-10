@@ -82,6 +82,17 @@ class HashedBlock(Serializable):
     def __hash__(self) -> int:
         return hash(self.mining_hash())
 
+    @staticmethod
+    def genesis() -> 'HashedBlock':
+        """
+        The genesis is a block with num=0, no parent hash, a difficulty of
+        0, no transactions, no mining entropy and a mining time at the Unix
+        epoch.
+        """
+        b = Block(0, None, BlockConfig(0), [])
+        return HashedBlock(
+            b, mining_entropy=b"", mining_timestamp=Timestamp(0))
+
     def replace_mining_entropy(self, new_entropy: bytes) -> None:
         self.mining_entropy = new_entropy
         self.mining_timestamp = Timestamp.now()

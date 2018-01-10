@@ -3,7 +3,7 @@ from core.timestamp import Timestamp
 import math
 from typing import Iterator
 
-DEFAULT_DIFFICULTY = 2
+DEFAULT_DIFFICULTY = 18
 BLOCK_TIME_TARGET = 1 * 60 * 1000 # 1 minute
 
 def difficulty_adjustment(block_times: Iterator[Timestamp], l: DBLogger) -> int:

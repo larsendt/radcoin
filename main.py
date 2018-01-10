@@ -19,6 +19,15 @@ def mine(key_pair: KeyPair, cfg: Config) -> None:
     bm = BlockMiner(cfg)
     bm.mine_forever()
 
+def run_client_forever(cfg: Config) -> None:
+    c = ChainClient(cfg)
+    c.poll_forever()
+
+@gen.coroutine
+def start_client(cfg: Config):
+    pool = ProcessPoolExecutor(max_workers=1)
+    yield pool.submit(run_client_forever, cfg)
+
 @gen.coroutine
 def start_miner(cfg: Config):
     pool = ProcessPoolExecutor(max_workers=cfg.miner_procs())
@@ -28,10 +37,21 @@ def start_miner(cfg: Config):
 def main():
     parser = argparse.ArgumentParser("Radcoin does stuff")
     parser.add_argument(
-        "--mine_genesis",
-        help="Mine a new genesis block. You probably generally don't want to do this.",
+        "--initialize",
+        help="Make new config. Will fail if config exists.",
         default=False,
         action="store_true")
+
+    parser.add_argument(
+        "--log_level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARN", "ERROR"])
+
+    parser.add_argument(
+        "--run_miner",
+        help="If set, run a miner.",
+        action="store_true",
+        default=False)
 
     parser.add_argument(
         "--cfg_path",
@@ -45,20 +65,19 @@ def main():
 
     args = parser.parse_args()
 
-    cfg: Config = ConfigBuilder(args.cfg_path, args.advertize_addr).build()
+    if args.initialize:
+        ConfigBuilder.init_defaults(args.cfg_path)
 
-    if args.mine_genesis:
-        print("Mining genesis")
-        bm = BlockMiner(cfg) # TODO: pass in a key pair
-        bm.mine_genesis()
-
-    print("Bootstrapping as necessary")
-    client = ChainClient(cfg)
-    client.bootstrap()
+    cfg: Config = ConfigBuilder(
+        args.cfg_path,
+        args.advertize_addr,
+        args.log_level).build()
 
     print("Running server")
     serv = ChainServer(cfg)
     serv.listen()
+
+    ioloop.IOLoop.current().spawn_callback(start_client, cfg)
 
     if args.run_miner:
         print("Running miner")

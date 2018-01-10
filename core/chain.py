@@ -18,41 +18,16 @@ class InvalidBlockError(Exception):
 class BlockChain(object):
     def __init__(
             self,
-            genesis_block: HashedBlock,
             storage: BlockChainStorage,
             cfg: Config) -> None:
 
         self.storage = storage
         self.l = DBLogger(self, cfg)
 
-    @staticmethod
-    def load(storage: BlockChainStorage, cfg: Config) -> "BlockChain":
         genesis = storage.get_genesis()
         if genesis is None:
-            raise Exception("No genesis block in storage")
-
-        bc = BlockChain(genesis, storage, cfg)
-        bc.l.info("Loading existing chain, validating blocks")
-        for b in storage.get_all_non_genesis_in_order():
-            if not bc.block_is_valid(b):
-                raise InvalidBlockError("Invalid block:", b)
-        bc.l.info("All blocks validated")
-        return bc
-
-    @staticmethod
-    def new(
-        storage: BlockChainStorage,
-        genesis_block: HashedBlock,
-        cfg: Config) -> "BlockChain":
-        if storage.get_genesis() is not None:
-            raise Exception("Already have a genesis block in storage!")
-
-        storage.add_block(genesis_block)
-        bc = BlockChain(genesis_block, storage, cfg)
-
-        bc.l.info("New chain, added genesis {} to storage".format(
-            genesis_block.mining_hash().hex()))
-        return bc
+            self.l.info("Storage didn't have genesis. Added.")
+            storage.add_block(HashedBlock.genesis())
 
     def get_difficulty(self, head: Optional[HashedBlock] = None) -> int:
         if head is None:
@@ -83,19 +58,7 @@ class BlockChain(object):
 
     @staticmethod
     def genesis_is_valid(block: HashedBlock, l: DBLogger) -> bool:
-        if block.block_num() != 0:
-            l.warn("block num is not zero")
-            return False
-
-        if not block.hash_meets_difficulty():
-            l.warn("hash doesn't meet difficulty")
-            return False
-
-        if len(block.block.transactions) != 0:
-            l.warn("genesis block has transactions")
-            return False
-
-        return True
+        return block.mining_hash() == HashedBlock.genesis().mining_hash()
 
     def block_is_valid(self, block: HashedBlock) -> bool:
         if self.storage.has_hash(block.parent_mining_hash()):
@@ -206,6 +169,11 @@ class BlockChain(object):
 
         seg_stop = ((height // TUNING_SEGMENT_LENGTH) + 1) * TUNING_SEGMENT_LENGTH
         seg_start = seg_stop - TUNING_SEGMENT_LENGTH
+
+        if seg_start == 0:
+            self.l.debug("Omitting genesis block from tuning calculation")
+            seg_start = 1
+
         self.l.debug("Getting segment [{}, {})".format(seg_start, seg_stop))
 
         segment = self.storage.get_range(seg_start, seg_stop)
@@ -213,5 +181,12 @@ class BlockChain(object):
         adjustment = difficulty_adjustment(times, self.l)
         new_difficulty = current_difficulty + adjustment
         self.l.debug("Tuning difficulty:", new_difficulty)
+
+        if new_difficulty < 0:
+            self.l.warn("Attempted to set new difficulty to {}, clamping to 0".format(new_difficulty))
+            new_difficulty = 0
+        elif new_difficulty > 255:
+            self.l.warn("Attempted to set new difficulty to {}, clamping to 255".format(new_difficulty))
+            new_difficulty = 255
 
         return new_difficulty
