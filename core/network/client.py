@@ -55,7 +55,7 @@ class ChainClient(object):
                 self.l.info("Peer {} previously unknown. Adding.".format(new_peer))
                 self.peer_list.add_peer(new_peer)
 
-        if not self.self_peer in peers:
+        if self.cfg.advertize_self() and not self.self_peer in peers:
             self.l.info("Peer {} doesn't know about us, telling it.".format(peer))
             resp = self._peer_post(peer, "/peer", {"peers": [self.self_peer.serializable()]})
             if resp is None:
