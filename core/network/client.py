@@ -44,6 +44,10 @@ class ChainClient(object):
     def sync(self, peer: Peer) -> None:
         peers = self.request_peers(peer)
 
+        if peers is None:
+            self.l.debug("Peer not responding", peer)
+            return
+
         self.l.debug("Peer {} knows about {} peers".format(peer, len(peers)))
 
         for new_peer in peers:
@@ -53,7 +57,9 @@ class ChainClient(object):
 
         if not self.self_peer in peers:
             self.l.info("Peer {} doesn't know about us, telling it.".format(peer))
-            self._peer_post(peer, "/peer", {"peers": [self.self_peer.serializable()]})
+            resp = self._peer_post(peer, "/peer", {"peers": [self.self_peer.serializable()]})
+            if resp is None:
+                self.l.info("Peer didn't respond", peer)
 
         peer_head = self.request_head(peer)
         if not peer_head:
@@ -85,6 +91,10 @@ class ChainClient(object):
         while len(to_request) > 0:
             parent = to_request.pop(0)
             successors = self.request_successors(parent.mining_hash(), peer)
+
+            if successors is None:
+                self.l.debug("Peer is not responding", peer)
+                return
 
             for succ in successors: # ( ͡° ͜ʖ ͡°)
                 self.l.info("New block:", succ)
@@ -141,17 +151,17 @@ class ChainClient(object):
 
         return h
 
-    def request_successors(self, parent_hash: Hash, peer: Peer) -> List[HashedBlock]:
+    def request_successors(self, parent_hash: Hash, peer: Peer) -> Optional[List[HashedBlock]]:
         payload = {"parent_hex_hash": parent_hash.hex()}
         obj = self._peer_get(peer, "/block", payload)
 
         if obj is None:
             self.l.debug("No successors from peer", peer)
-            return []
+            return None
 
         if "blocks" not in obj:
             self.l.debug("Couldn't turn response into list of blocks", peer, obj)
-            return []
+            return None
 
         new_blocks: List[HashedBlock] = []
         for block_obj in obj["blocks"]:
@@ -159,21 +169,21 @@ class ChainClient(object):
                 b = HashedBlock.from_dict(block_obj)
             except KeyError as e:
                 self.l.debug("Invalid block object from peer", peer, obj)
-                return []
+                return None
 
             new_blocks.append(b)
 
         return new_blocks
 
-    def request_peers(self, peer: Peer) -> List[Peer]:
+    def request_peers(self, peer: Peer) -> Optional[List[Peer]]:
         obj = self._peer_get(peer, "/peer", {})
         if obj is None:
             self.l.debug("No peer response from peer", peer)
-            return []
+            return None
 
         if not "peers" in obj:
             self.l.debug("No peers in response from peer", peer, obj)
-            return []
+            return None
 
         new_peers: List[Peer] = []
         for peer_obj in obj["peers"]:
