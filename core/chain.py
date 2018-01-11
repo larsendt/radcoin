@@ -1,6 +1,7 @@
 from core.amount import Amount
 from core.block import HashedBlock
-from core.chain_storage import BlockChainStorage
+from core.storage.chain_storage import BlockChainStorage
+from core.storage.transaction_storage import TransactionStorage
 from core.config import Config
 from core.dblog import DBLogger
 from core import difficulty
@@ -15,13 +16,18 @@ TUNING_SEGMENT_LENGTH = 64
 class InvalidBlockError(Exception):
     pass
 
+class InvalidTransactionError(Exception):
+    pass
+
 class BlockChain(object):
     def __init__(
             self,
             storage: BlockChainStorage,
+            transaction_storage: TransactionStorage,
             cfg: Config) -> None:
 
         self.storage = storage
+        self.transaction_storage = transaction_storage
         self.l = DBLogger(self, cfg)
 
         genesis = storage.get_genesis()
@@ -49,12 +55,20 @@ class BlockChain(object):
     def get_head(self) -> HashedBlock:
         return self.storage.get_head()
 
-    def add_block(self, block: HashedBlock, retransmit: bool = False) -> None:
+    def add_block(self, block: HashedBlock) -> None:
         if self.block_is_valid(block):
             self.l.debug("Store block", block.block_num(), block.mining_hash().hex())
-            self.storage.add_block(block, retransmit)
+            self.storage.add_block(block)
+            self._cleanup_outstanding_transactions(block)
         else:
             raise InvalidBlockError("Block is invalid")
+
+    def add_outstanding_transaction(self, txn: SignedTransaction) -> None:
+        if self.transaction_is_valid(txn):
+            self.l.debug("Store transaction", txn)
+            self.transaction_storage.add_transaction(txn)
+        else:
+            raise InvalidTransactionError("Transaction is invalid")
 
     @staticmethod
     def genesis_is_valid(block: HashedBlock, l: DBLogger) -> bool:
@@ -190,3 +204,13 @@ class BlockChain(object):
             new_difficulty = 255
 
         return new_difficulty
+
+    def _cleanup_outstanding_transactions(self, block: HashedBlock) -> None:
+        self.l.debug("Cleaning up outstanding transactions in block", block)
+        for transaction in block.block.transactions:
+            sig = transaction.signature
+            if self.transaction_storage.has_transaction(sig):
+                self.l.debug("Removing outstanding transaction", transaction)
+                self.transaction_storage.remove_transaction(sig)
+            else:
+                self.l.debug("Transaction wasn't oustanding", transaction)

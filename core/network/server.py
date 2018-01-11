@@ -5,7 +5,8 @@ from core.dblog import DBLogger
 from core.network import util
 from core.network.peer_list import Peer, PeerList
 from core.serializable import Hash
-from core.sqlite_chain import SqliteBlockChainStorage
+from core.storage.sqlite_chain import SqliteBlockChainStorage
+from core.storage.sqlite_transaction import SqliteTransactionStorage
 from core.transaction.signed_transaction import SignedTransaction
 import json
 from tornado import web
@@ -94,14 +95,30 @@ class BlockRequestHandler(web.RequestHandler):
         self.write(resp)
 
 class TransactionRequestHandler(web.RequestHandler):
-    def initialize(self, cfg: Config):
+    def initialize(self, cfg: Config, chain: BlockChain):
         self.l = DBLogger(self, cfg)
+        self.chain = chain
 
     def get(self) -> None:
-        self.write(util.error_response("unimplemented"))
+        txns = self.chain.transaction_storage.get_all_transactions()
+        ser_txns = list(map(lambda t: t.serializable(), txns))
+        resp = {"transactions": ser_txns}
+        self.set_status(200)
+        self.write(resp)
 
     def post(self) -> None:
-        self.write(util.error_response("unimplemented"))
+        ser = self.request.body.decode('utf-8')
+        txn = SignedTransaction.deserialize(ser)
+
+        if self.chain.transaction_is_valid(txn):
+            self.l.info("New transaction", txn)
+            self.chain.add_transaction(txn)
+            self.set_status(200)
+            self.write(util.generic_ok_response())
+        else:
+            self.l.warn("Invalid transaction", txn)
+            self.set_status(400)
+            self.write(util.error_response("Invalid transaction"))
 
 class PeerRequestHandler(web.RequestHandler):
     def initialize(self, peer_list: PeerList, cfg: Config) -> None:
@@ -157,7 +174,8 @@ class ChainServer(object):
         self.peer_list = PeerList(cfg)
 
         self.storage = SqliteBlockChainStorage(cfg)
-        self.chain = BlockChain(self.storage, cfg)
+        self.transaction_storage = SqliteTransactionStorage(cfg)
+        self.chain = BlockChain(self.storage, self.transaction_storage, cfg)
 
         self.peer_info = Peer(
                 cfg.server_peer_id(),
@@ -168,7 +186,7 @@ class ChainServer(object):
         self.app = web.Application([
             web.url(r"/", DefaultRequestHandler),
             web.url(r"/block", BlockRequestHandler, {"chain": self.chain, "cfg": cfg}),
-            web.url(r"/transaction", TransactionRequestHandler, {"cfg": cfg}),
+            web.url(r"/transaction", TransactionRequestHandler, {"chain": self.chain, "cfg": cfg}),
             web.url(r"/peer", PeerRequestHandler, {"peer_list": self.peer_list, "cfg": cfg}),
             web.url(r"/chain", ChainRequestHandler, {"cfg": cfg, "chain": self.chain}),
         ])

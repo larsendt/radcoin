@@ -4,7 +4,8 @@ from core.config import Config
 from core.dblog import DBLogger
 from core.network.peer_list import Peer, PeerList
 from core.serializable import Hash
-from core.sqlite_chain import SqliteBlockChainStorage
+from core.storage.sqlite_chain import SqliteBlockChainStorage
+from core.storage.sqlite_transaction import SqliteTransactionStorage
 from core.transaction.signed_transaction import SignedTransaction
 import json
 import random
@@ -22,7 +23,10 @@ class ChainClient(object):
                 cfg.server_advertize_addr(),
                 cfg.server_listen_port())
 
-        self.chain = BlockChain(SqliteBlockChainStorage(cfg), cfg)
+        self.chain = BlockChain(
+            SqliteBlockChainStorage(cfg),
+            SqliteTransactionStorage(cfg),
+            cfg)
         self.cfg = cfg
 
     def poll_forever(self) -> None:
@@ -60,6 +64,19 @@ class ChainClient(object):
             resp = self._peer_post(peer, "/peer", {"peers": [self.self_peer.serializable()]})
             if resp is None:
                 self.l.info("Peer didn't respond", peer)
+
+        transactions = self.request_transactions(peer)
+        if transactions is None:
+            self.l.info("Peer not responding", peer)
+            return
+
+        for txn in transactions:
+            if not self.chain.transaction_storage.has_transaction(txn.signature):
+                if self.chain.transaction_is_valid(txn):
+                    self.l.info("New transaction", txn)
+                    self.chain.add_outstanding_transaction(txn)
+                else:
+                    self.l.warn("Peer sent us an invalid transaction", peer, txn)
 
         peer_head = self.request_head(peer)
         if not peer_head:
@@ -194,6 +211,26 @@ class ChainClient(object):
                 return []
             new_peers.append(new_peer)
         return new_peers
+
+    def request_transactions(self, peer: Peer) -> Optional[List[SignedTransaction]]:
+        obj = self._peer_get(peer, "/transaction", {})
+        if obj is None:
+            self.l.debug("No peer response from peer", peer)
+            return None
+
+        if not "transactions" in obj:
+            self.l.debug("No transaction response from peer", peer, obj)
+            return None
+
+        new_transactions: List[SignedTransaction] = []
+        for txn_obj in obj["transactions"]:
+            try:
+                new_txn = SignedTransaction.from_dict(txn_obj)
+            except KeyError as e:
+                self.l.debug("Invalid transaction from peer", peer, txn_obj, exc=e)
+            else:
+                new_transactions.append(new_txn)
+        return new_transactions
 
     def _peer_get(
         self,

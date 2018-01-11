@@ -7,7 +7,8 @@ from core.dblog import DBLogger
 from core.difficulty import DEFAULT_DIFFICULTY
 from core.key_pair import KeyPair
 from core.network.client import ChainClient
-from core.sqlite_chain import SqliteBlockChainStorage
+from core.storage.sqlite_chain import SqliteBlockChainStorage
+from core.storage.sqlite_transaction import SqliteTransactionStorage
 from core.timestamp import Timestamp
 from core.transaction.transaction import Transaction
 from core.transaction.signed_transaction import SignedTransaction
@@ -29,7 +30,8 @@ class BlockMiner(object):
             self.key_pair = key_pair
 
         self.storage = SqliteBlockChainStorage(cfg)
-        self.chain = BlockChain(self.storage, cfg)
+        self.transaction_storage = SqliteTransactionStorage(cfg)
+        self.chain = BlockChain(self.storage, self.transaction_storage, cfg)
 
     def mine_forever(self) -> None:
         self.l.info("Miner running")
