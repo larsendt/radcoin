@@ -14,6 +14,7 @@ from typing import Dict, Iterator, Optional, List
 
 TUNING_SEGMENT_LENGTH = 64
 ABANDONMENT_DEPTH = 10
+REWARD_AMOUNT = Amount(100)
 
 class InvalidBlockError(Exception):
     pass
@@ -154,14 +155,14 @@ class BlockChain(object):
         return True
 
     def transaction_is_valid(self, signed: SignedTransaction) -> bool:
+        if signed.is_reward():
+            return self.reward_is_valid(signed)
+
         if not signed.signature_is_valid():
             self.l.warn(
                 "Transaction signature is invalid (sig {})".format(
                     signed.signature))
             return False
-
-        if signed.is_reward():
-            return self.reward_is_valid(signed)
 
         output_sum = Amount(0)
         for output in signed.transaction.outputs:
@@ -200,7 +201,24 @@ class BlockChain(object):
         return True
 
     def reward_is_valid(self, reward: SignedTransaction) -> bool:
-        # TODO
+        if not reward.signature_is_valid():
+            self.l.warn(
+                "Reward signature is invalid (sig {})".format(
+                    reward.signature))
+            return False
+
+        if len(reward.transaction.outputs) != 1:
+            self.l.warn("Reward has n_outputs != 1", reward)
+            return False
+
+        if len(reward.transaction.inputs) != 0:
+            self.l.warn("Reward has inputs", reward)
+            return False
+
+        if reward.transaction.outputs[0].amount != REWARD_AMOUNT:
+            self.l.warn("Reward has invalid amout", reward)
+            return False
+
         return True
 
     def get_transaction_output(
