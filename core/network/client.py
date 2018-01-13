@@ -71,7 +71,7 @@ class ChainClient(object):
             return
 
         for txn in transactions:
-            if not self.chain.transaction_storage.has_transaction(txn.signature):
+            if not self.chain.transaction_storage.has_transaction(txn.sha256()):
                 if self.chain.transaction_is_valid(txn):
                     self.l.info("New transaction", txn)
                     self.chain.add_outstanding_transaction(txn)
@@ -170,7 +170,7 @@ class ChainClient(object):
 
     def request_successors(self, parent_hash: Hash, peer: Peer) -> Optional[List[HashedBlock]]:
         payload = {"parent_hex_hash": parent_hash.hex()}
-        obj = self._peer_get(peer, "/block", payload)
+        obj = self._peer_get(peer, "/blocks", payload)
 
         if obj is None:
             self.l.debug("No successors from peer", peer)
@@ -193,7 +193,7 @@ class ChainClient(object):
         return new_blocks
 
     def request_peers(self, peer: Peer) -> Optional[List[Peer]]:
-        obj = self._peer_get(peer, "/peer", {})
+        obj = self._peer_get(peer, "/peers", {})
         if obj is None:
             self.l.debug("No peer response from peer", peer)
             return None
@@ -213,7 +213,7 @@ class ChainClient(object):
         return new_peers
 
     def request_transactions(self, peer: Peer) -> Optional[List[SignedTransaction]]:
-        obj = self._peer_get(peer, "/transaction", {})
+        obj = self._peer_get(peer, "/outstanding_transactions", {})
         if obj is None:
             self.l.debug("No peer response from peer", peer)
             return None

@@ -16,11 +16,11 @@ class DefaultRequestHandler(web.RequestHandler):
     def get(self) -> None:
         d = {
             "available_rpcs": [
-                {"route": "/block",
+                {"route": "/blocks",
                  "params": ["hex_hash", "parent_hex_hash", "block_num"],
                  "methods": ["get", "post"]},
-                {"route": "/transaction", "methods": ["get", "post"]},
-                {"route": "/peer", "methods": ["get", "post"]},
+                {"route": "/outstanding_transactions", "methods": ["get", "post"]},
+                {"route": "/peers", "methods": ["get", "post"]},
                 {"route": "/chain", "methods": ["get"]},
             ]
         }
@@ -112,7 +112,7 @@ class TransactionRequestHandler(web.RequestHandler):
 
         if self.chain.transaction_is_valid(txn):
             self.l.info("New transaction", txn)
-            self.chain.add_transaction(txn)
+            self.chain.add_outstanding_transaction(txn)
             self.set_status(200)
             self.write(util.generic_ok_response())
         else:
@@ -185,10 +185,22 @@ class ChainServer(object):
 
         self.app = web.Application([
             web.url(r"/", DefaultRequestHandler),
-            web.url(r"/block", BlockRequestHandler, {"chain": self.chain, "cfg": cfg}),
-            web.url(r"/transaction", TransactionRequestHandler, {"chain": self.chain, "cfg": cfg}),
-            web.url(r"/peer", PeerRequestHandler, {"peer_list": self.peer_list, "cfg": cfg}),
-            web.url(r"/chain", ChainRequestHandler, {"cfg": cfg, "chain": self.chain}),
+            web.url(
+                r"/blocks",
+                BlockRequestHandler,
+                {"chain": self.chain, "cfg": cfg}),
+            web.url(
+                r"/outstanding_transactions", 
+                TransactionRequestHandler,
+                {"chain": self.chain, "cfg": cfg}),
+            web.url(
+                r"/peers",
+                PeerRequestHandler,
+                {"peer_list": self.peer_list, "cfg": cfg}),
+            web.url(
+                r"/chain",
+                ChainRequestHandler,
+                {"cfg": cfg, "chain": self.chain}),
         ])
 
     def listen(self) -> None:

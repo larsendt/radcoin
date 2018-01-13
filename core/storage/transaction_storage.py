@@ -1,4 +1,4 @@
-from core.signature import Signature
+from core.serializable import Hash
 from core.transaction.signed_transaction import SignedTransaction
 from typing import List, Optional
 
@@ -9,14 +9,14 @@ class TransactionStorage(object):
     def add_transaction(self, txn: SignedTransaction) -> None:
         raise NotImplementedError()
 
-    def remove_transaction(self, sig: Signature) -> None:
+    def remove_transaction(self, txn_hash: Hash) -> None:
         raise NotImplementedError()
 
-    def has_transaction(self, sig: Signature) -> bool:
+    def has_transaction(self, txn_hash: Hash) -> bool:
         raise NotImplementedError()
 
     def get_all_transactions(self) -> List[SignedTransaction]:
         raise NotImplementedError()
 
-    def get_transaction(self, sig: Signature) -> Optional[SignedTransaction]:
+    def get_transaction(self, txn_hash: Hash) -> Optional[SignedTransaction]:
         raise NotImplementedError()

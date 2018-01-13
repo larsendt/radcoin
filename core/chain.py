@@ -207,10 +207,9 @@ class BlockChain(object):
 
     def _cleanup_outstanding_transactions(self, block: HashedBlock) -> None:
         self.l.debug("Cleaning up outstanding transactions in block", block)
-        for transaction in block.block.transactions:
-            sig = transaction.signature
-            if self.transaction_storage.has_transaction(sig):
-                self.l.debug("Removing outstanding transaction", transaction)
-                self.transaction_storage.remove_transaction(sig)
+        for txn in block.block.transactions:
+            if self.transaction_storage.has_transaction(txn.sha256()):
+                self.l.debug("Removing outstanding transaction", txn)
+                self.transaction_storage.remove_transaction(txn.sha256())
             else:
-                self.l.debug("Transaction wasn't oustanding", transaction)
+                self.l.debug("Transaction wasn't oustanding", txn)
