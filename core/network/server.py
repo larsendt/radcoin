@@ -7,6 +7,7 @@ from core.network.peer_list import Peer, PeerList
 from core.serializable import Hash
 from core.storage.sqlite_chain import SqliteBlockChainStorage
 from core.storage.sqlite_transaction import SqliteTransactionStorage
+from core.storage.sqlite_uxto import SqliteUXTOStorage
 from core.transaction.signed_transaction import SignedTransaction
 import json
 from tornado import web
@@ -175,7 +176,12 @@ class ChainServer(object):
 
         self.storage = SqliteBlockChainStorage(cfg)
         self.transaction_storage = SqliteTransactionStorage(cfg)
-        self.chain = BlockChain(self.storage, self.transaction_storage, cfg)
+        self.uxto_storage = SqliteUXTOStorage(cfg)
+        self.chain = BlockChain(
+                self.storage,
+                self.transaction_storage,
+                self.uxto_storage,
+                cfg)
 
         self.peer_info = Peer(
                 cfg.server_peer_id(),

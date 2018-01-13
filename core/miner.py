@@ -9,6 +9,7 @@ from core.key_pair import KeyPair
 from core.network.client import ChainClient
 from core.storage.sqlite_chain import SqliteBlockChainStorage
 from core.storage.sqlite_transaction import SqliteTransactionStorage
+from core.storage.sqlite_uxto import SqliteUXTOStorage
 from core.timestamp import Timestamp
 from core.transaction.transaction import Transaction
 from core.transaction.signed_transaction import SignedTransaction
@@ -31,7 +32,12 @@ class BlockMiner(object):
 
         self.storage = SqliteBlockChainStorage(cfg)
         self.transaction_storage = SqliteTransactionStorage(cfg)
-        self.chain = BlockChain(self.storage, self.transaction_storage, cfg)
+        self.uxto_storage = SqliteUXTOStorage(cfg)
+        self.chain = BlockChain(
+            self.storage,
+            self.transaction_storage,
+            self.uxto_storage,
+            cfg)
 
     def mine_forever(self) -> None:
         self.l.info("Miner running")

@@ -6,6 +6,7 @@ from core.network.peer_list import Peer, PeerList
 from core.serializable import Hash
 from core.storage.sqlite_chain import SqliteBlockChainStorage
 from core.storage.sqlite_transaction import SqliteTransactionStorage
+from core.storage.sqlite_uxto import SqliteUXTOStorage
 from core.transaction.signed_transaction import SignedTransaction
 import json
 import random
@@ -26,6 +27,7 @@ class ChainClient(object):
         self.chain = BlockChain(
             SqliteBlockChainStorage(cfg),
             SqliteTransactionStorage(cfg),
+            SqliteUXTOStorage(cfg),
             cfg)
         self.cfg = cfg
 

@@ -2,6 +2,7 @@ from core.amount import Amount
 from core.block import HashedBlock
 from core.storage.chain_storage import BlockChainStorage
 from core.storage.transaction_storage import TransactionStorage
+from core.storage.uxto_storage import UXTOStorage 
 from core.config import Config
 from core.dblog import DBLogger
 from core import difficulty
@@ -25,10 +26,12 @@ class BlockChain(object):
             self,
             storage: BlockChainStorage,
             transaction_storage: TransactionStorage,
+            uxto_storage: UXTOStorage,
             cfg: Config) -> None:
 
         self.storage = storage
         self.transaction_storage = transaction_storage
+        self.uxto_storage = uxto_storage
         self.l = DBLogger(self, cfg)
 
         genesis = storage.get_genesis()
@@ -63,6 +66,25 @@ class BlockChain(object):
         elif self.block_is_valid(block):
             self.l.debug("Store block", block)
             self.storage.add_block(block)
+            for txn in block.block.transactions:
+                for out in txn.transaction.outputs:
+                    self.l.debug("Add UXTO", txn.txn_hash(), out.output_id)
+                    self.uxto_storage.add_output(txn.txn_hash(), out.output_id)
+
+                for inp in txn.transaction.inputs:
+                    out = self.get_transaction_output(
+                        inp.output_block_hash,
+                        inp.output_transaction_hash,
+                        inp.output_id)
+
+                    self.l.debug("Claim UXTO",
+                        inp.output_transaction_hash,
+                        inp.output_id)
+
+                    self.uxto_storage.mark_claimed(
+                        inp.output_transaction_hash,
+                        inp.output_id)
+
             self._cleanup_outstanding_transactions(block)
             self._abandon_blocks()
         else:
@@ -154,7 +176,12 @@ class BlockChain(object):
                 inp.output_id)
             
             if out is None:
-                self.l.warn("Output {} was unknown", out)
+                self.l.warn("Output was unknown", out)
+                return False
+
+            if self.uxto_storage.output_is_claimed(
+                    inp.output_transaction_hash, inp.output_id):
+                self.l.warn("Output already claimed", out)
                 return False
 
             claimed_sum += out.amount
