@@ -12,6 +12,7 @@ from core.transaction.transaction_output import TransactionOutput
 from typing import Dict, Iterator, Optional, List
 
 TUNING_SEGMENT_LENGTH = 64
+ABANDONMENT_DEPTH = 10
 
 class InvalidBlockError(Exception):
     pass
@@ -56,15 +57,22 @@ class BlockChain(object):
         return self.storage.get_head()
 
     def add_block(self, block: HashedBlock) -> None:
-        if self.block_is_valid(block):
-            self.l.debug("Store block", block.block_num(), block.mining_hash().hex())
+        if self.storage.has_hash(block.mining_hash()):
+            self.l.debug("Already have block", block)
+            return
+        elif self.block_is_valid(block):
+            self.l.debug("Store block", block)
             self.storage.add_block(block)
             self._cleanup_outstanding_transactions(block)
+            self._abandon_blocks()
         else:
             raise InvalidBlockError("Block is invalid")
 
     def add_outstanding_transaction(self, txn: SignedTransaction) -> None:
-        if self.transaction_is_valid(txn):
+        if self.transaction_storage.has_transaction(txn.txn_hash()):
+            self.l.debug("Already have txn", txn)
+            return
+        elif self.transaction_is_valid(txn):
             self.l.debug("Store transaction", txn)
             self.transaction_storage.add_transaction(txn)
         else:
@@ -80,6 +88,10 @@ class BlockChain(object):
         else:
             self.l.warn("Parent with hash {} not known".format(
                 block.parent_mining_hash().hex()))
+            return False
+
+        if self.block_should_be_abandoned(block):
+            self.l.warn("Block should be abandoned", block)
             return False
 
         difficulty = self.get_difficulty(parent)
@@ -137,7 +149,14 @@ class BlockChain(object):
         claimed_sum = Amount(0)
         for inp in signed.transaction.inputs:
             out = self.get_transaction_output(
-                inp.output_block_hash, inp.output_id)
+                inp.output_block_hash,
+                inp.output_transaction_hash,
+                inp.output_id)
+            
+            if out is None:
+                self.l.warn("Output {} was unknown", out)
+                return False
+
             claimed_sum += out.amount
 
             if out.to_addr != signed.transaction.claimer:
@@ -160,6 +179,7 @@ class BlockChain(object):
     def get_transaction_output(
         self,
         block_hash: Hash,
+        txn_hash: Hash,
         output_id: int) -> Optional[TransactionOutput]:
 
         block = self.storage.get_by_hash(block_hash)
@@ -171,6 +191,9 @@ class BlockChain(object):
             return None
 
         for signed in block.block.transactions:
+            if signed.txn_hash() != txn_hash:
+                continue 
+
             for output in signed.transaction.outputs:
                 if output.output_id == output_id:
                     return output
@@ -205,11 +228,53 @@ class BlockChain(object):
 
         return new_difficulty
 
+    def block_should_be_abandoned(self, block: HashedBlock) -> bool:
+        """
+        Either the block is in the master chain or it's within 10 blocks of
+        the current head.
+        """
+        return not (self.block_is_in_master_chain(block)
+                or (self.get_head().block_num() - block.block_num() < ABANDONMENT_DEPTH))
+        
+    def block_is_in_master_chain(self, block: HashedBlock) -> bool:
+        """
+        Use BFS to see if the current head can be reached from the block in 
+        question.
+        """
+        head = self.get_head()
+        crawl_queue: List[HashedBlock] = [block]
+
+        while len(crawl_queue) > 0:
+            cur = crawl_queue.pop(0)
+            if cur == head:
+                return True
+            else:
+                crawl_queue.extend(
+                        self.storage.get_by_parent_hash(cur.mining_hash()))
+
+        return False
+
     def _cleanup_outstanding_transactions(self, block: HashedBlock) -> None:
         self.l.debug("Cleaning up outstanding transactions in block", block)
         for txn in block.block.transactions:
-            if self.transaction_storage.has_transaction(txn.sha256()):
+            if self.transaction_storage.has_transaction(txn.txn_hash()):
                 self.l.debug("Removing outstanding transaction", txn)
-                self.transaction_storage.remove_transaction(txn.sha256())
+                self.transaction_storage.remove_transaction(txn.txn_hash())
             else:
                 self.l.debug("Transaction wasn't oustanding", txn)
+
+    def _abandon_blocks(self):
+        head = self.get_head()
+        abandon_height = head.block_num() - ABANDONMENT_DEPTH
+        abandon_candidates = self.storage.get_by_block_num(abandon_height)
+        for block in abandon_candidates:
+            if self.block_should_be_abandoned(block):
+                self.l.debug("Abandon block", block)
+                self.storage.abandon_block(block)
+
+                for txn in block.block.transactions:
+                    if self.transaction_is_valid(txn):
+                        self.l.debug("Adding abandoned transaction back to pool", txn)
+                        self.transaction_storage.add_transaction(txn)
+                    else:
+                        self.l.debug("Abandoned transaction no longer valid")

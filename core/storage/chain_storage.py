@@ -38,3 +38,6 @@ class BlockChainStorage(object):
 
     def get_all_non_genesis_in_order(self) -> List[HashedBlock]:
         raise NotImplementedError()
+
+    def abandon_block(self, block_hash: Hash) -> None:
+        raise NotImplementedError()

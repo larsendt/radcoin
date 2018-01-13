@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS blocks (
     parent_hash BLOB,
     block_num INTEGER,
     is_head INTEGER,
+    abandoned INTEGER,
     serialized BLOB
 )"""
 
@@ -29,23 +30,40 @@ CREATE INDEX IF NOT EXISTS head_index ON blocks(is_head)"""
 
 ADD_BLOCK_SQL = """
 INSERT INTO blocks VALUES (
-    :hash, :parent_hash, :block_num, :is_head, :serialized
+    :hash, :parent_hash, :block_num, :is_head, 0, :serialized
 )"""
 
+ABANDON_BLOCK_SQL = "UPDATE blocks SET abandoned=1 WHERE hash=:hash"
+
 GET_BY_HASH_SQL = "SELECT serialized FROM blocks WHERE hash = ?"
-GET_BY_PARENT_HASH_SQL = "SELECT serialized FROM blocks WHERE parent_hash = ?"
-GET_BY_NUM_SQL = "SELECT serialized FROM blocks WHERE block_num = ?"
+
+GET_BY_PARENT_HASH_SQL = """
+SELECT serialized
+FROM blocks
+WHERE parent_hash = ?
+AND abandoned = 0
+"""
+
+GET_BY_NUM_SQL = """
+SELECT serialized
+FROM blocks
+WHERE block_num = ?
+AND abandoned = 0
+"""
 
 GET_RANGE_SQL = """
 SELECT serialized
 FROM blocks
 WHERE block_num >= :lower
-AND block_num < :upper"""
+AND block_num < :upper
+AND abandoned = 0
+"""
 
 GET_ALL_NON_GENESIS_IN_ORDER_SQL = """
 SELECT serialized
 FROM blocks
 WHERE block_num > 0
+AND abandoned = 0
 ORDER BY block_num ASC"""
 
 GET_HEIGHT_SQL = "SELECT MAX(block_num) FROM blocks"
@@ -94,6 +112,15 @@ class SqliteBlockChainStorage(BlockChainStorage):
             "serialized": block.serialize(),
         }
         c.execute(ADD_BLOCK_SQL, args)
+        self._conn.commit()
+
+    def abandon_block(self, block_hash: Hash) -> None:
+        args = {
+            "hash": block_hash.raw_sha256,
+        }
+
+        c = self._conn.cursor()
+        c.execute(ABANDON_BLOCK_SQL, args)
         self._conn.commit()
 
     def get_head(self) -> HashedBlock:

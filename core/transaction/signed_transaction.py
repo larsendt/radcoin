@@ -1,5 +1,5 @@
 from core.key_pair import Address, KeyPair
-from core.serializable import Serializable, Ser
+from core.serializable import Hash, Serializable, Ser
 from core.signature import Signature
 from core.transaction.transaction import Transaction
 
@@ -12,6 +12,9 @@ class SignedTransaction(Serializable):
     def sign(transaction: Transaction, key_pair: KeyPair) -> "SignedTransaction":
         sig = key_pair.sign(transaction.serialize())
         return SignedTransaction(transaction, sig)
+
+    def txn_hash(self) -> Hash:
+        return self.sha256()
 
     def is_reward(self) -> bool:
         return (len(self.transaction.inputs) == 0
