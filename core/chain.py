@@ -14,7 +14,7 @@ from typing import Dict, Iterator, Optional, List
 
 TUNING_SEGMENT_LENGTH = 64
 ABANDONMENT_DEPTH = 10
-REWARD_AMOUNT = Amount(100)
+REWARD_AMOUNT = Amount.units(100)
 
 class InvalidBlockError(Exception):
     pass

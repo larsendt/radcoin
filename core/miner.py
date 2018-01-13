@@ -1,7 +1,7 @@
 from core.amount import Amount
 from core.block import Block, HashedBlock
 from core.block_config import BlockConfig
-from core.chain import BlockChain
+from core.chain import BlockChain, REWARD_AMOUNT
 from core.config import Config
 from core.dblog import DBLogger
 from core.difficulty import DEFAULT_DIFFICULTY
@@ -15,7 +15,7 @@ from core.transaction.transaction import Transaction
 from core.transaction.signed_transaction import SignedTransaction
 import os
 import time
-from typing import Optional
+from typing import List, Optional
 
 class BlockMiner(object):
     def __init__(self, cfg: Config, key_pair: Optional[KeyPair] = None) -> None:
@@ -41,6 +41,7 @@ class BlockMiner(object):
 
     def mine_forever(self) -> None:
         self.l.info("Miner running")
+
         while True:
             head = self.chain.get_head()
             self.l.debug("Mining on block {}".format(head.block_num()))
@@ -56,11 +57,18 @@ class BlockMiner(object):
     def mine_on(self, parent: HashedBlock, difficulty: int) -> Optional[HashedBlock]:
         reward = self.make_reward()
         config = BlockConfig(difficulty)
+
+        txns = self.transaction_storage.get_all_transactions()
+        txns.append(reward)
+
+        self.l.debug("Mining on {} txns".format(len(txns)))
+
         block = Block(
             parent.block_num()+1,
             parent.mining_hash(),
             config,
-            [reward])
+            txns)
+
         hb = HashedBlock(block)
 
         start = time.time()
@@ -71,8 +79,22 @@ class BlockMiner(object):
 
         return None
 
+    def transactions(self) -> List[SignedTransaction]:
+        candidate_txns = self.transaction_storage.get_all_transactions()
+        mine_txns: List[SignedTransaction] = []
+
+        for txn in candidate_txns:
+            if self.chain.transaction_is_valid(txn):
+                self.l.debug("Txn is is valid for mining", txn)
+                mine_txns.append(txn)
+            else:
+                self.l.warn("Txn is not valid for mining", txn)
+
+        mine_txns.append(self.make_reward())
+        return mine_txns
+
     def make_reward(self) -> SignedTransaction:
-        reward = Transaction.reward(Amount.units(100), self.key_pair.address())
+        reward = Transaction.reward(REWARD_AMOUNT, self.key_pair.address())
         return SignedTransaction.sign(reward, self.key_pair)
 
     def make_genesis(self) -> HashedBlock:
