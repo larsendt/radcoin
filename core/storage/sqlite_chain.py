@@ -123,6 +123,8 @@ class SqliteBlockChainStorage(BlockChainStorage):
         c.execute(ABANDON_BLOCK_SQL, args)
         self._conn.commit()
 
+        # TODO: add all transactions back into unconfirmed pool
+
     def get_head(self) -> HashedBlock:
         c = self._conn.cursor()
         c.execute(GET_HEAD_SQL)

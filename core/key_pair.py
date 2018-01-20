@@ -22,6 +22,9 @@ class Address(Serializable):
                 hex_verify_key, nacl.encoding.RawEncoder())
         return Address(key)
 
+    def hex(self) -> str:
+        return self._verify_key.encode(encoder=nacl.encoding.RawEncoder()).hex()
+
     @staticmethod
     def from_dict(obj: Ser) -> 'Address':
         hex_key = obj["edd25519_pub_key"]
@@ -45,11 +48,24 @@ class Address(Serializable):
         }
 
 class KeyPair(object):
-    def __init__(self) -> None:
-        self._signing_key = nacl.signing.SigningKey.generate()
+    def __init__(self, key: nacl.signing.SigningKey) -> None:
+        self._signing_key = key
+
+    @staticmethod
+    def from_seed(seed: bytes) -> 'KeyPair':
+        signing_key = nacl.signing.SigningKey(seed)
+        return KeyPair(signing_key)
+
+    @staticmethod
+    def new() -> 'KeyPair':
+        signing_key = nacl.signing.SigningKey.generate()
+        return KeyPair(signing_key) 
 
     def address(self) -> Address:
         return Address(self._signing_key.verify_key)
+
+    def seed(self) -> bytes:
+        return bytes(self._signing_key)
 
     def sign(self, payload: bytes) -> Signature:
         signed = self._signing_key.sign(payload)

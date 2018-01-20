@@ -31,7 +31,7 @@ def start_client(cfg: Config):
 @gen.coroutine
 def start_miner(cfg: Config):
     pool = ProcessPoolExecutor(max_workers=cfg.miner_procs())
-    kp = KeyPair()
+    kp = KeyPair.new()
     yield [pool.submit(mine, kp, cfg) for i in range(cfg.miner_procs())]
 
 def main():

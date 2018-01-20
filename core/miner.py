@@ -26,7 +26,7 @@ class BlockMiner(object):
         self.client = ChainClient(cfg)
 
         if key_pair is None:
-            self.key_pair = KeyPair()
+            self.key_pair = KeyPair.new()
         else:
             self.key_pair = key_pair
 

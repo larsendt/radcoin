@@ -16,7 +16,8 @@ DEFAULTS = {
     "listen_port": 8989,
     "log_level": "INFO", # see core.dblog
     "peer_sample_size": 10, # when choosing a random set of peers, use this many
-    "poll_delay": 5 # seconds
+    "poll_delay": 5, # seconds
+    "wallet_path": "./radcoin.wallet",
 }
 
 class Config(object):
@@ -35,6 +36,7 @@ class Config(object):
         self._gateway_port = int(args["gateway_port"])
         self._peer_sample_size = int(args["peer_sample_size"])
         self._poll_delay = int(args["poll_delay"])
+        self._wallet_path = args["wallet_path"]
 
         if 0 < args["miner_throttle"] <= 1:
             self._miner_throttle = args["miner_throttle"]
@@ -82,6 +84,9 @@ class Config(object):
 
     def poll_delay(self) -> int:
         return self._poll_delay
+
+    def wallet_path(self) -> str:
+        return self._wallet_path
 
 class ConfigBuilder(object):
     def __init__(self,

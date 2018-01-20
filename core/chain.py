@@ -70,7 +70,7 @@ class BlockChain(object):
             for txn in block.block.transactions:
                 for out in txn.transaction.outputs:
                     self.l.debug("Add UXTO", txn.txn_hash(), out.output_id)
-                    self.uxto_storage.add_output(txn.txn_hash(), out.output_id)
+                    self.uxto_storage.add_output(txn.txn_hash(), out.to_addr, out.output_id)
 
                 for inp in txn.transaction.inputs:
                     out = self.get_transaction_output(
